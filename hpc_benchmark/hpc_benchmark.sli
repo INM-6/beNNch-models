@@ -35,12 +35,7 @@
    User arguments
    --------------
    - All are required
-   - Script must be run as
 
-      <bin_path>/nest <script_path>/hpc_benchmark.sli \
-         --userargs=<scale>_<num_vp>_<simtime>_<num_rec>_<plastic>_<d_min>_<d_max>
-
-    - Individual arguments must be separated with _ for JUBE compatibility
     - Arguments:
       - scale (int)    : network size is scale * 11.250 (>= 8 recommended)
       - num_vp (int)   : number of virtual processes (MPI ranks x threads per rank)
@@ -130,16 +125,14 @@
 % define all relevant parameters: changes should be made here
 % all data is placed in the userdict dictionary
 
-% call like:
-% nest --userargs=scale,nvp,simtime,numrec,plastic,d_min,d_max hpc_benchmark.sli
-
-/user_scale statusdict/userargs :: 0 get (_) breakup 0 get double def
-/user_nvp statusdict/userargs :: 0 get (_) breakup 1 get int def
-/user_simtime statusdict/userargs :: 0 get (_) breakup 2 get double def
-/user_numrec statusdict/userargs :: 0 get (_) breakup 3 get int def
-/user_plastic statusdict/userargs :: 0 get (_) breakup 4 get (true) eq def
-/user_d_min statusdict/userargs :: 0 get (_) breakup 5 get double def
-/user_d_max statusdict/userargs :: 0 get (_) breakup 6 get double def
+% parameters set by JUBE
+/user_scale {SCALE} def
+/user_nvp {totVPs} def
+/user_simtime {SIMTIME} def
+/user_numrec {NUM_REC} def
+/user_plastic {PLASTIC} def
+/user_d_min {D_MIN} def
+/user_d_max {D_MAX} def
 
 (GIT: ) =only statusdict/version :: ==
 
@@ -151,7 +144,7 @@
 (user_d_min  : ) =only user_d_min ==
 (user_d_max  : ) =only user_d_max ==
 
-/nvp user_nvp def % total number of virtual processes
+/nvp user_nvp def     % total number of virtual processes
 /scale user_scale def %  scaling factor of the network size, total network size = scale*11250 neurons
 /simtime user_simtime def
 /Nrec user_numrec def
