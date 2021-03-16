@@ -48,9 +48,9 @@ M_INFO = 10
 ########################### PARAMETER SECTION #################################
 
 # parameters set by JUBE
-user_scale = {SCALE}
+user_scale = {scale}
 user_nvp = {totVPs}
-user_plastic = {pastic}
+user_plastic = {plastic}
 user_rule = {rule}
 
 print('GIT: ({}) \nuser_scale: {:>3} \nuser_nvp: {:>5} \nuser_plastic: {} \nuser_rule: {:>5}'.format(
