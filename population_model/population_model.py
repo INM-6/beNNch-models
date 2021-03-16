@@ -50,8 +50,8 @@ M_INFO = 10
 # parameters set by JUBE
 user_scale = {SCALE}
 user_nvp = {totVPs}
-user_plastic = {PLASTIC}
-user_rule = {RULE}
+user_plastic = {pastic}
+user_rule = {rule}
 
 print('GIT: ({}) \nuser_scale: {:>3} \nuser_nvp: {:>5} \nuser_plastic: {} \nuser_rule: {:>5}'.format(
     nest.version(), user_scale, user_nvp, user_plastic, user_rule))
