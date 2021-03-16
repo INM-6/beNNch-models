@@ -126,13 +126,13 @@
 % all data is placed in the userdict dictionary
 
 % parameters set by JUBE
-/user_scale {SCALE} def
+/user_scale {scale} def
 /user_nvp {totVPs} def
-/user_simtime {SIMTIME} def
-/user_numrec {NUM_REC} def
-/user_plastic {PLASTIC} def
-/user_d_min {D_MIN} def
-/user_d_max {D_MAX} def
+/user_simtime {simtime} def
+/user_numrec {num_rec} def
+/user_plastic {plastic} def
+/user_d_min {d_min} def
+/user_d_max {d_max} def
 
 (GIT: ) =only statusdict/version :: ==
 
