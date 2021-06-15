@@ -40,20 +40,20 @@ time_start = time.time()
 
 
 sim_dict.update({
-    't_presim': {preTsim},
-    't_sim': {Tsim},
+    't_presim': {model_time_presim},
+    't_sim': {model_time_sim},
     'rec_dev': [{record_spikes}],
-    'master_seed': {seed},
-    'local_num_threads': {cpuspertask},
+    'rng_seed': {seed},
+    'local_num_threads': {threads_per_node},
     'print_time': False,
     'kwds': [{kwds}]})
 
 net_dict.update({
-    'N_scaling': 1.,
-    'K_scaling': 1.,
-    'poisson_input': {POISSON},
+    'N_scaling': {N_SCALING},
+    'K_scaling': {K_SCALING},
+    'poisson_input': {POISSON_INPUT},
     'V0_type': {V0_TYPE},
-    'synapse_type': {SYNAPSE}})
+    'synapse_type': {SYNAPSE_TYPE}})
 
 net = network.Network(sim_dict, net_dict, stim_dict)
 time_network = time.time()
