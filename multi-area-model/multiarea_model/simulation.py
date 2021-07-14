@@ -94,10 +94,12 @@ class Simulation:
 
         self.areas_simulated = self.params['areas_simulated']
         self.areas_recorded = self.params['recording_dict']['areas_recorded']
+        self.pre_T = self.params['t_presim']
         self.T = self.params['t_sim']
 
         self.time_create = 0
-        self.time_connect = 0
+        self.time_connect_area = 0
+        self.time_connect_cc = 0
 
     def __eq__(self, other):
         # Two simulations are equal if the simulation parameters and
@@ -198,7 +200,7 @@ class Simulation:
             a = Area(self, self.network, area_name)
             self.areas.append(a)
             self.time_create += a.time_create
-            self.time_connect += a.time_connect
+            self.time_connect_area += a.time_connect_area
             print("Memory after {0} : {1:.2f} MB".format(area_name, self.memory() / 1024.))
 
     def cortico_cortical_input(self):
@@ -249,6 +251,7 @@ class Simulation:
                          self.network.structure[source_area_name]}
                         for source_area_name in self.network.area_list}
 
+        t0 = time.time()
         # Connections between simulated areas are not replaced
         if not replace_cc:
             for target_area in self.areas:
@@ -277,6 +280,8 @@ class Simulation:
                         target_area.create_additional_input(replace_cc,
                                                             source_area.name,
                                                             cc_input[source_area.name])
+        t1 = time.time()
+        self.time_connect_cc = t1 - t0
 
     def simulate(self):
         """
@@ -287,8 +292,8 @@ class Simulation:
         self.base_memory = self.memory()
         self.prepare()
         t1 = time.time()
-        self.time_prepare = t1 - t0
-        print("Prepared simulation in {0:.2f} seconds.".format(self.time_prepare))
+        self.time_kernel_prepare = t1 - t0
+        print("Prepared simulation in {0:.2f} seconds.".format(self.time_kernel_prepare))
 
         self.create_recording_devices()
         self.create_areas()
@@ -311,16 +316,19 @@ class Simulation:
 
         t4 = time.time()
         nest.Prepare()
-        nest.Run(10.)
-        self.time_init = time.time() - t4
-        self.init_memory = self.memory()
-        print("Init time in {0:.2f} seconds.".format(self.time_init))
+        self.time_network_prepare = time.time() - t4
+        print("Network preparation time in {0:.2f} seconds.".format(self.time_network_prepare))
 
         t5 = time.time()
+        nest.Run(self.pre_T)
+        self.time_presimulate = time.time() - t5
+        self.init_memory = self.memory()
+        print("Presimulation time in {0:.2f} seconds.".format(self.time_presimulate))
+
+        t6 = time.time()
         nest.Run(self.T)
         nest.Cleanup()
-        t6 = time.time()
-        self.time_simulate = t6 - t5
+        self.time_simulate = time.time() - t6
         self.total_memory = self.memory()
         print("Simulated network in {0:.2f} seconds.".format(self.time_simulate))
         self.logging()
@@ -343,13 +351,16 @@ class Simulation:
         Write runtime and memory for the first 30 MPI processes
         to file.
         """
-        d = {'py_time_prepare': self.time_prepare,
+        d = {'py_time_kernel_prepare': self.time_kernel_prepare,
              'py_time_network_local': self.time_network_local,
              'py_time_network_global': self.time_network_global,
-             'py_time_init': self.time_init,
+             'py_time_presimulate': self.time_presimulate,
+             'py_time_network_prepare': self.time_network_prepare,
              'py_time_simulate': self.time_simulate,
              'py_time_create': self.time_create,
-             'py_time_connect': self.time_connect,
+             'py_time_connect': self.time_connect_area + self.time_connect_cc + self.time_network_prepare,
+             'py_time_connect_area': self.time_connect_area,
+             'py_time_connect_cc': self.time_connect_cc,
              'base_memory': self.base_memory,
              'network_memory': self.network_memory,
              'init_memory': self.init_memory,
@@ -441,7 +452,7 @@ class Area:
         self.time_create = t1 - t0
         self.connect_devices()
         self.connect_populations()
-        self.time_connect = time.time() - t1
+        self.time_connect_area = time.time() - t1
         print("Rank {}: created area {} with {} local nodes".format(nest.Rank(),
                                                                     self.name,
                                                                     self.num_local_nodes))

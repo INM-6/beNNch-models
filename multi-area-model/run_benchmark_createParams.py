@@ -4,7 +4,7 @@ import sys
 import json
 import nest
 
-from multiarea_model import MultiAreaModel, MultiAreaModel_3#, MultiAreaModel_rng
+from multiarea_model import MultiAreaModel, MultiAreaModel_3
 from config import base_path
 from start_jobs import start_job
 from figures.Schmidt2018_dyn.network_simulations import NEW_SIM_PARAMS
@@ -17,6 +17,8 @@ data_path = sys.argv[5]
 data_folder_hash = sys.argv[6]
 mam_state = sys.argv[7]  # Fig3: corresponds to figure 3 in schmidt et al. 2018: Groundstate
                          # Fig5: corresponds to figure 5 in schmidt et al. 2018: Metastable
+master_seed = int(sys.argv[8])
+t_presim = float(sys.argv[9])
 
 network_params, _ = NEW_SIM_PARAMS[mam_state][0]
 
@@ -26,10 +28,11 @@ network_params['K_scaling'] = K_scaling
 network_params['fullscale_rates'] = os.path.join(base_path, 'tests/fullscale_rates.json')
 
 sim_params = {'t_sim': t_sim,
+              't_presim': t_presim,
               'num_processes': num_processes,
               'local_num_threads': 1,
               'recording_dict': {'record_vm': False},
-              'master_seed': 1}
+              'master_seed': master_seed}
 
 theory_params = {'dt': 0.1}
 

@@ -40,6 +40,8 @@ sim_params = {
     'master_seed': 0,
     # simulation step (in ms)
     'dt': 0.1,
+    # presimulation time (in ms)
+    't_presim': 500.,
     # simulated time (in ms)
     't_sim': 10.0,
     # no. of MPI processes:

@@ -83,9 +83,27 @@ def write_out_timer_data(data_dir, label):
                'time_communicate_prepare',
                'time_construction_connect',
                'time_construction_create',
-               'time_simulate']
+               'time_simulate',
+               'py_time_kernel_prepare',
+               'py_time_network_local',
+               'py_time_network_global',
+               'py_time_simulate',
+               'py_time_presimulate',
+               'py_time_network_prepare',
+               'py_time_create',
+               'py_time_connect_area',
+               'py_time_connect_cc',
+               'py_time_connect']
+
+    metrics_sum = ['base_memory',
+                   'network_memory',
+                   'init_memory',
+                   'total_memory',
+                   'num_connections',
+                   'local_spike_counter']
 
     d = {key: list() for key in metrics}
+    d_sum = {key: list() for key in metrics_sum}
 
     for logfile in all_logfiles:
         with open(logfile, 'r') as fn:
@@ -95,6 +113,11 @@ def write_out_timer_data(data_dir, label):
                     d[m].append(f[m])
                 except KeyError:
                     pass
+            for m in d_sum:
+                try:
+                    d_sum[m].append(f[m])
+                except KeyError:
+                    pass
 
     for m in d:
         if d[m]:
@@ -102,9 +125,17 @@ def write_out_timer_data(data_dir, label):
         else:
             d[m] = -1.
 
+    for m in d_sum:
+        if d_sum[m]:
+            d_sum[m] = np.sum(d_sum[m])
+        else:
+            d_sum[m] = -1.
+
     with open('timer_data.txt', "w") as outF:
         for m in d:
             outF.write(m + ' ' + str(d[m]) + '\n')
+        for m in d_sum:
+            outF.write(m + ' ' + str(d_sum[m]) + '\n')
 
 
 def write_out_KernelStatus():
