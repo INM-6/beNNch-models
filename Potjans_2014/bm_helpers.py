@@ -1,36 +1,41 @@
-import numpy as np
-import re
 import json
+import os
+
 import nest
 
 
-def write_out_timer_data(fname='timer_data.txt'):
+def logging(py_timers=None, memory_used=None):
     """
-    Extracts timer data from the NEST KernelStatus and writes
-    it into a single file to be later read in by JUBE.
-
-    Parameters
-    ----------
-    fname
-        file name
+    Write runtime and memory for all MPI processes to file.
     """
-    metrics = ['time_collocate_spike_data',
-               'time_communicate_spike_data',
-               'time_communicate_target_data',
-               'time_deliver_spike_data',
-               'time_gather_spike_data',
-               'time_gather_target_data',
-               'time_update',
-               'time_communicate_prepare',
-               'time_construction_connect',
-               'time_construction_create',
-               'time_simulate']
+    metrics = [
+        'num_connections',
+        'local_spike_counter',
+        'time_collocate_spike_data',
+        'time_communicate_spike_data',
+        'time_communicate_target_data',
+        'time_deliver_spike_data',
+        'time_gather_spike_data',
+        'time_gather_target_data',
+        'time_update',
+        'time_communicate_prepare',
+        'time_construction_connect',
+        'time_construction_create',
+        'time_simulate'
+    ]
 
-    d = nest.GetKernelStatus()
-    with open(fname, 'w') as f:
+    fn = os.path.join('data',
+                      '_'.join(('logfile',
+                                str(nest.Rank()))))
+    with open(fn, 'w') as f:
         for m in metrics:
-            if m in d:
-                f.write(m + ' ' + str(d[m]) + '\n')
+            f.write(m + ' ' + str(nest.GetKernelStatus(m)) + '\n')
+        if py_timers:
+            for key, value in py_timers.items():
+                f.write(key + ' ' + str(value) + '\n')
+        if memory_used:
+            for key, value in memory_used.items():
+                f.write(key + ' ' + str(value) + '\n')
 
 
 def write_out_KernelStatus(fname='kernel_status.txt'):

@@ -18,7 +18,7 @@ usually not recorded in this scenario, the evaluation part with plotting of
 from stimulus_params import stim_dict
 from network_params import net_dict
 from sim_params import sim_dict
-from bm_helpers import write_out_timer_data, write_out_KernelStatus, memory
+from bm_helpers import logging, memory
 import network
 import nest
 import numpy as np
@@ -44,7 +44,7 @@ sim_dict.update({
     't_sim': {model_time_sim},
     'rec_dev': [{record_spikes}],
     'rng_seed': {seed},
-    'local_num_threads': {threads_per_node},
+    'local_num_threads': {threads_per_task},
     'print_time': False,
     'kwds': [{kwds}]})
 
@@ -55,20 +55,32 @@ net_dict.update({
     'V0_type': {V0_TYPE},
     'synapse_type': {SYNAPSE_TYPE}})
 
+py_timers = {}
+memory_used = {}
+
+t0 = time.time()
 net = network.Network(sim_dict, net_dict, stim_dict)
-time_network = time.time()
+t1 = time.time()
+py_timers['py_time_network'] = t1 - t0
 
 net.create()
-time_create = time.time()
+t2 = time.time()
+py_timers['py_time_create'] = t2 - t1
 
 net.connect()
-time_connect = time.time()
+t3 = time.time()
+py_timers['py_time_connect'] = t3 - t2
+memory_used['network_memory'] = memory()
 
 net.simulate(sim_dict['t_presim'])
-time_presimulate = time.time()
+t4 = time.time()
+py_timers['py_time_presimulate'] = t4 - t3
+memory_used['init_memory'] = memory()
 
 net.simulate(sim_dict['t_sim'])
-time_simulate = time.time()
+t5 = time.time()
+py_timers['py_time_simulate'] = t5 - t4
+memory_used['total_memory'] = memory()
 
 ###############################################################################
 # Summarize time measurements. Rank 0 usually takes longest because of print
@@ -78,23 +90,17 @@ print(
     '\nTimes of Rank {}:\n'.format(
         nest.Rank()) +
     '  Total time:          {:.3f} s\n'.format(
-        time_simulate -
-        time_start) +
+        py_timers['py_time_simulate']) +
     '  Time to initialize:  {:.3f} s\n'.format(
-        time_network -
-        time_start) +
+        py_timers['py_time_network']) +
     '  Time to create:      {:.3f} s\n'.format(
-        time_create -
-        time_network) +
+        py_timers['py_time_create']) +
     '  Time to connect:     {:.3f} s\n'.format(
-        time_connect -
-        time_create) +
+        py_timers['py_time_connect']) +
     '  Time to presimulate: {:.3f} s\n'.format(
-        time_presimulate -
-        time_connect) +
+        py_timers['py_time_presimulate']) +
     '  Time to simulate:    {:.3f} s\n'.format(
-        time_simulate -
-        time_presimulate))
+        py_timers['py_time_simulate']))
 
 ###############################################################################
 # Query the accumulated number of spikes on each rank.
@@ -120,5 +126,4 @@ print(
     'memory: {}'.format(
         mem))
 
-write_out_KernelStatus()
-write_out_timer_data()
+logging(py_timers=py_timers, memory_used=memory_used)

@@ -344,8 +344,7 @@ class Simulation:
 
     def logging(self):
         """
-        Write runtime and memory for the first 30 MPI processes
-        to file.
+        Write runtime and memory for all MPI processes to file.
         """
         d = {'py_time_kernel_prepare': self.time_kernel_prepare,
              'py_time_network_local': self.time_network_local,
@@ -382,7 +381,8 @@ class Simulation:
                                     'logfile',
                                     str(nest.Rank()))))
         with open(fn, 'w') as f:
-            json.dump(d, f)
+            for key, value in d.items():
+                f.write(key + ' ' + str(value) + '\n')
 
     def save_network_gids(self):
         with open(os.path.join(self.data_dir,
