@@ -43,7 +43,7 @@ sim_dict.update({
     't_presim': {model_time_presim},
     't_sim': {model_time_sim},
     'rec_dev': [{record_spikes}],
-    'rng_seed': {seed},
+    'rng_seed': {rng_seed},
     'local_num_threads': {threads_per_task},
     'print_time': False,
     'kwds': [{kwds}]})

@@ -17,7 +17,7 @@ data_path = sys.argv[5]
 data_folder_hash = sys.argv[6]
 mam_state = sys.argv[7]  # Fig3: corresponds to figure 3 in schmidt et al. 2018: Groundstate
                          # Fig5: corresponds to figure 5 in schmidt et al. 2018: Metastable
-master_seed = int(sys.argv[8])
+rng_seed = int(sys.argv[8])
 t_presim = float(sys.argv[9])
 
 network_params, _ = NEW_SIM_PARAMS[mam_state][0]
@@ -32,7 +32,7 @@ sim_params = {'t_sim': t_sim,
               'num_processes': num_processes,
               'local_num_threads': 1,
               'recording_dict': {'record_vm': False},
-              'master_seed': master_seed}
+              'rng_seed': rng_seed}
 
 theory_params = {'dt': 0.1}
 
