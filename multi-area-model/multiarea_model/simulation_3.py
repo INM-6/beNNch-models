@@ -149,7 +149,7 @@ class Simulation:
         Prepare NEST Kernel.
         """
         nest.ResetKernel()
-        master_seed = self.params['master_seed']
+        rng_seed = self.params['rng_seed']
         num_processes = self.params['num_processes']
         local_num_threads = self.params['local_num_threads']
         vp = num_processes * local_num_threads
@@ -158,14 +158,12 @@ class Simulation:
                               'overwrite_files': True,
                               'data_path': os.path.join(self.data_dir, 'recordings'),
                               'print_time': False,
-                              'rng_seed': master_seed})
+                              'rng_seed': rng_seed})
 
         # nest.set_verbosity('M_INFO')
 
         nest.SetDefaults(self.network.params['neuron_params']['neuron_model'],
                          self.network.params['neuron_params']['single_neuron_dict'])
-        self.pyrngs = [np.random.RandomState(s) for s in list(range(
-            master_seed + vp + 1, master_seed + 2 * (vp + 1)))]
 
     def create_recording_devices(self):
         """
