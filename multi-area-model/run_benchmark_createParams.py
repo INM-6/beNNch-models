@@ -15,17 +15,21 @@ t_sim = float(sys.argv[3])
 K_scaling = float(sys.argv[4])
 data_path = sys.argv[5]
 data_folder_hash = sys.argv[6]
-mam_state = sys.argv[7]  # Fig3: corresponds to figure 3 in schmidt et al. 2018: Groundstate
-                         # Fig5: corresponds to figure 5 in schmidt et al. 2018: Metastable
+# Fig3: corresponds to figure 3 in schmidt et al. 2018: Groundstate
+mam_state = sys.argv[7]
+# Fig5: corresponds to figure 5 in schmidt et al. 2018: Metastable
 rng_seed = int(sys.argv[8])
 t_presim = float(sys.argv[9])
+record_spikes = float(sys.argv[10])
 
 network_params, _ = NEW_SIM_PARAMS[mam_state][0]
 
-network_params['connection_params']['K_stable'] = os.path.join(base_path, 'K_stable.npy')
+network_params['connection_params']['K_stable'] = os.path.join(
+    base_path, 'K_stable.npy')
 network_params['N_scaling'] = N_scaling
 network_params['K_scaling'] = K_scaling
-network_params['fullscale_rates'] = os.path.join(base_path, 'tests/fullscale_rates.json')
+network_params['fullscale_rates'] = os.path.join(
+    base_path, 'tests/fullscale_rates.json')
 
 sim_params = {'t_sim': t_sim,
               't_presim': t_presim,
@@ -33,6 +37,9 @@ sim_params = {'t_sim': t_sim,
               'local_num_threads': 1,
               'recording_dict': {'record_vm': False},
               'rng_seed': rng_seed}
+
+if not record_spikes:
+    sim_params['recording_dict']['areas_recorded'] = []
 
 theory_params = {'dt': 0.1}
 
@@ -76,5 +83,3 @@ print("Mean-field theory predicts an average "
       "rate of {0:.3f} spikes/s across all populations.".format(np.mean(r[:, -1])))
 
 start_job(M.simulation.label, data_path, data_folder_hash)
-
-
