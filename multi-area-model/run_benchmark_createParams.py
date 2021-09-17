@@ -36,7 +36,7 @@ sim_params = {'t_sim': t_sim,
               'num_processes': num_processes,
               'local_num_threads': 1,
               'recording_dict': {'record_vm': False},
-              'rng_seed': rng_seed}
+              }
 
 if not record_spikes:
     sim_params['recording_dict']['areas_recorded'] = []
@@ -54,6 +54,7 @@ except:
 
 if NEST_version == '2':
     print("NEST version 2.x\n")
+    sim_params['master_seed'] = rng_seed
     M = MultiAreaModel(network_params, simulation=True,
                        sim_spec=sim_params,
                        theory=True,
@@ -62,6 +63,7 @@ if NEST_version == '2':
                        data_folder_hash=data_folder_hash)
 elif NEST_version == '3':
     print("NEST version 3.0\n")
+    sim_params['rng_seed'] = rng_seed
     M = MultiAreaModel_3(network_params, simulation=True,
                          sim_spec=sim_params,
                          theory=True,
