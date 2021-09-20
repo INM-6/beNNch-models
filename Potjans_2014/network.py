@@ -75,6 +75,11 @@ class Network:
         # derive parameters based on input dictionaries
         self.__derive_parameters()
 
+	# Check whether NEST 2 or 3 is used. No straight way of checking this is
+        # available. But PrintNetwork was removed in NEST 3, so checking for its
+        # existence should suffice.
+        self.USING_NEST_3 = 'PrintNetwork' not in dir(nest)
+
         # initialize the NEST kernel
         self.__setup_nest()
 
@@ -177,7 +182,7 @@ class Network:
             print('Interval to plot spikes: {} ms'.format(raster_plot_interval))
             helpers.plot_raster(
                 self.data_path,
-                'spike_detector',
+                'spike_recorder',
                 raster_plot_interval[0],
                 raster_plot_interval[1],
                 self.net_dict['N_scaling'])
@@ -185,7 +190,7 @@ class Network:
             print('Interval to compute firing rates: {} ms'.format(
                 firing_rates_interval))
             helpers.firing_rates(
-                self.data_path, 'spike_detector',
+                self.data_path, 'spike_recorder',
                 firing_rates_interval[0], firing_rates_interval[1])
             helpers.boxplot(self.data_path, self.net_dict['populations'])
 
@@ -287,36 +292,48 @@ class Network:
             {'local_num_threads': self.sim_dict['local_num_threads']})
         N_vp = nest.GetKernelStatus('total_num_virtual_procs')
 
-        master_seed = self.sim_dict['master_seed']
-        grng_seed = master_seed + N_vp
-        rng_seeds = (master_seed + N_vp + 1 + np.arange(N_vp)).tolist()
+        if self.USING_NEST_3:
+            rng_seed = self.sim_dict['rng_seed']
 
-        # Check whether NEST 2 or 3 is used. No straight way of checking this is
-        # available. But PrintNetwork was removed in NEST 3, so checking for its
-        # existence should suffice.
-        self.USING_NEST_3 = 'PrintNetwork' not in dir(nest)
-        if not self.USING_NEST_3:
+            if nest.Rank() == 0:
+                print('RNG seed: {} '.format(rng_seed))
+                print('  Total number of virtual processes: {}'.format(N_vp))
+
+            # pass parameters to NEST kernel
+            self.sim_resolution = self.sim_dict['sim_resolution']
+            kernel_dict = {
+                'resolution': self.sim_resolution,
+                'rng_seed': rng_seed,
+                'overwrite_files': self.sim_dict['overwrite_files'],
+                'print_time': self.sim_dict['print_time']}
+
+        else:
+            master_seed = self.sim_dict['master_seed']
+            grng_seed = master_seed + N_vp
+            rng_seeds = (master_seed + N_vp + 1 + np.arange(N_vp)).tolist()
+
             self.pyrngs = [np.random.RandomState(s) for s in list(range(
                 master_seed, master_seed + N_vp))]
 
-        if nest.Rank() == 0:
-            print('Master seed: {} '.format(master_seed))
-            print('  Total number of virtual processes: {}'.format(N_vp))
-            print('  Global random number generator seed: {}'.format(grng_seed))
-            print(
-                '  Seeds for random number generators of virtual processes: ' +
-                '{}'.format(rng_seeds))
+            if nest.Rank() == 0:
+                print('Master seed: {} '.format(master_seed))
+                print('  Total number of virtual processes: {}'.format(N_vp))
+                print('  Global random number generator seed: {}'.format(grng_seed))
+                print(
+                    '  Seeds for random number generators of virtual processes: ' +
+                    '{}'.format(rng_seeds))
 
-        # pass parameters to NEST kernel
-        self.sim_resolution = self.sim_dict['sim_resolution']
-        kernel_dict = {
-            'resolution': self.sim_resolution,
-            'grng_seed': grng_seed,
-            'rng_seeds': rng_seeds,
-            'overwrite_files': self.sim_dict['overwrite_files'],
-            'print_time': self.sim_dict['print_time']}
-        if self.sim_dict['kwds']:
-            kernel_dict.update(self.sim_dict['kwds'][0])
+            # pass parameters to NEST kernel
+            self.sim_resolution = self.sim_dict['sim_resolution']
+            kernel_dict = {
+                'resolution': self.sim_resolution,
+                'grng_seed': grng_seed,
+                'rng_seeds': rng_seeds,
+                'overwrite_files': self.sim_dict['overwrite_files'],
+                'print_time': self.sim_dict['print_time']}
+
+        if 'kwds' in self.sim_dict:
+            kernel_dict.update(self.sim_dict['kwds'])
         nest.SetKernelStatus(kernel_dict)
 
     def __create_neuronal_populations(self):
@@ -434,20 +451,15 @@ class Network:
         if nest.Rank() == 0:
             print('Creating recording devices.')
 
-        if 'spike_detector' in self.sim_dict['rec_dev']:
+        if 'spike_recorder' in self.sim_dict['rec_dev']:
             if nest.Rank() == 0:
-                print('  Creating spike detectors.')
+                print('  Creating spike recorders.')
             if self.USING_NEST_3:
                 sd_dict = {'record_to': 'ascii',
-                           'label': os.path.join(self.data_path, 'spike_detector')}
-                try:
-                    self.spike_recorders = nest.Create('spike_recorder',
-                                                       n=self.num_pops,
-                                                       params=sd_dict)
-                except:
-                    self.spike_recorders = nest.Create('spike_detector',
-                                                       n=self.num_pops,
-                                                       params=sd_dict)
+                           'label': os.path.join(self.data_path, 'spike_recorder')}
+                self.spike_recorders = nest.Create('spike_recorder',
+                                                   n=self.num_pops,
+                                                   params=sd_dict)
             else:
                 sd_dict = {
                     'withgid': True,
@@ -624,7 +636,7 @@ class Network:
             print('Connecting recording devices.')
 
         for i, target_pop in enumerate(self.pops):
-            if 'spike_detector' in self.sim_dict['rec_dev']:
+            if 'spike_recorder' in self.sim_dict['rec_dev']:
                 if self.USING_NEST_3:
                     nest.Connect(target_pop, self.spike_recorders[i])
                 else:
