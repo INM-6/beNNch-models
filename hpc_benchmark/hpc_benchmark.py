@@ -91,7 +91,7 @@ M_ERROR = 30
 
 params = {
     'nvp': {num_vps},                  # total number of virtual processes
-    'scale': {N_SCALING}.,             # scaling factor of the network size
+    'scale': {N_SCALING},              # scaling factor of the network size
                                        # total network size = scale*11250 neurons
     'simtime': {model_time_sim},       # total simulation time in ms
     'presimtime': {model_time_presim}, # simulation time until reaching equilibrium
@@ -99,7 +99,7 @@ params = {
     'record_spikes': {record_spikes},  # switch to record spikes of excitatory
                                        # neurons to file
     'path_name': '.',                  # path where all files will have to be written
-    'log_file': 'log',                 # naming scheme for the log files
+    'log_file': 'logfile',             # naming scheme for the log files
 }
 
 
@@ -189,12 +189,9 @@ brunel_params = {
 # Function Section
 
 
-def build_network(logger):
+def build_network():
     """Builds the network including setting of simulation and neuron
     parameters, creation of neurons and connections
-
-    Requires an instance of Logger as argument
-
     """
 
     tic = time.time()  # start timer on construction
@@ -259,9 +256,7 @@ def build_network(logger):
         })
 
     BuildNodeTime = time.time() - tic
-
-    logger.log(str(BuildNodeTime) + ' # build_time_nodes')
-    logger.log(str(memory_thisjob()) + ' # virt_mem_after_nodes')
+    node_memory = str(memory_thisjob())
 
     tic = time.time()
 
@@ -339,48 +334,71 @@ def build_network(logger):
 
     # read out time used for building
     BuildEdgeTime = time.time() - tic
+    network_memory = str(memory_thisjob())
 
-    logger.log(str(BuildEdgeTime) + ' # build_edge_time')
-    logger.log(str(memory_thisjob()) + ' # virt_mem_after_edges')
+    d = {'py_time_create': BuildNodeTime,
+         'py_time_connect': BuildEdgeTime,
+         'node_memory': node_memory,
+         'network_memory': network_memory}
+    recorders = E_recorder if params['record_spikes'] else None
 
-    return E_recorder if params['record_spikes'] else None
+    return d, recorders
 
 
 def run_simulation():
     """Performs a simulation, including network construction"""
 
-    # open log file
-    with Logger(params['log_file']) as logger:
+    nest.ResetKernel()
+    nest.set_verbosity(M_INFO)
 
-        nest.ResetKernel()
-        nest.set_verbosity(M_INFO)
+    base_memory = str(memory_thisjob())
 
-        logger.log(str(memory_thisjob()) + ' # virt_mem_0')
+    build_dict, sr = build_network()
 
-        sr = build_network(logger)
+    tic = time.time()
 
-        tic = time.time()
+    nest.Simulate(params['presimtime'])
 
-        nest.Simulate(params['presimtime'])
+    PreparationTime = time.time() - tic
+    init_memory = str(memory_thisjob())
 
-        PreparationTime = time.time() - tic
+    tic = time.time()
 
-        logger.log(str(memory_thisjob()) + ' # virt_mem_after_presim')
-        logger.log(str(PreparationTime) + ' # presim_time')
+    nest.Simulate(params['simtime'])
 
-        tic = time.time()
+    SimCPUTime = time.time() - tic
+    total_memory = str(memory_thisjob())
 
-        nest.Simulate(params['simtime'])
+    average_rate = 0.0
+    if params['record_spikes']:
+        average_rate = compute_rate(sr)
 
-        SimCPUTime = time.time() - tic
+    d = {'py_time_presimulate': PreparationTime,
+         'py_time_simulate': SimCPUTime,
+         'base_memory': base_memory,
+         'init_memory': init_memory,
+         'total_memory': total_memory,
+         'num_connections': nest.num_connections,
+         'local_spike_counter': nest.local_spike_counter,
+         'average_rate': average_rate,
+         'time_collocate_spike_data': nest.kernel_status['time_collocate_spike_data'],
+         'time_communicate_spike_data': nest.kernel_status['time_communicate_spike_data'],
+         'time_communicate_target_data': nest.kernel_status['time_communicate_target_data'],
+         'time_deliver_spike_data': nest.kernel_status['time_deliver_spike_data'],
+         'time_gather_spike_data': nest.kernel_status['time_gather_spike_data'],
+         'time_gather_target_data': nest.kernel_status['time_gather_target_data'],
+         'time_update': nest.kernel_status['time_update'],
+         'time_communicate_prepare': nest.kernel_status['time_communicate_prepare'],
+         'time_construction_connect': nest.kernel_status['time_construction_connect'],
+         'time_construction_create': nest.kernel_status['time_construction_create'],
+         'time_simulate': nest.kernel_status['time_simulate']}
+    d.update(build_dict)
+    print(d)
 
-        logger.log(str(memory_thisjob()) + ' # virt_mem_after_sim')
-        logger.log(str(SimCPUTime) + ' # sim_time')
-
-        if params['record_spikes']:
-            logger.log(str(compute_rate(sr)) + ' # average rate')
-
-        print(nest.kernel_status)
+    fn = '{fn}_{rank}.dat'.format(fn=params['log_file'], rank=nest.Rank())
+    with open(fn, 'w') as f:
+        for key, value in d.items():
+            f.write(key + ' ' + str(value) + '\n')
 
 
 def compute_rate(sr):
@@ -408,39 +426,6 @@ def lambertwm1(x):
     """Wrapper for LambertWm1 function"""
     # Using scipy to mimic the gsl_sf_lambert_Wm1 function.
     return sp.lambertw(x, k=-1 if x < 0 else 0).real
-
-
-class Logger(object):
-    """Logger context manager used to properly log memory and timing
-    information from network simulations.
-
-    """
-
-    def __init__(self, file_name):
-        self.line_counter = 0
-        self.file_name = file_name
-
-    def __enter__(self):
-
-        # convert rank to string, prepend 0 if necessary to make
-        # numbers equally wide for all ranks
-        fn = '{fn}_{rank}.dat'.format(fn=self.file_name, rank=nest.Rank())
-
-        self.f = open(fn, 'w')
-
-        return self
-
-    def log(self, value):
-        line = '{lc} {rank} {value} \n'.format(
-            lc=self.line_counter, rank=nest.Rank(), value=value)
-        self.f.write(line)
-        self.line_counter += 1
-
-        print(str(nest.Rank()) + ' ' + value + '\n', file=sys.stdout)
-        print(str(nest.Rank()) + ' ' + value + '\n', file=sys.stderr)
-
-    def __exit__(self, exc_type, exc_val, traceback):
-        self.f.close()
 
 
 if __name__ == '__main__':
