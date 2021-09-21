@@ -47,13 +47,11 @@ M_INFO = 10
 
 ########################### PARAMETER SECTION #################################
 
-if len(sys.argv) != 5:
-    raise ValueError("user arguments should be scale, num_vp, plastic and user_rule")
-
-user_scale = int(sys.argv[1])
-user_nvp = int(sys.argv[2])
-user_plastic = bool(sys.argv[3])
-user_rule = str(sys.argv[4])
+# parameters set by JUBE
+user_scale = {scale}
+user_nvp = {totVPs}
+user_plastic = {plastic}
+user_rule = {rule}
 
 print('GIT: ({}) \nuser_scale: {:>3} \nuser_nvp: {:>5} \nuser_plastic: {} \nuser_rule: {:>5}'.format(
     nest.version(), user_scale, user_nvp, user_plastic, user_rule))
