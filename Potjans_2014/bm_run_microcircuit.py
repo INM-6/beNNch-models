@@ -46,7 +46,7 @@ sim_dict.update({
     'rng_seed': {rng_seed},
     'local_num_threads': {threads_per_task},
     'print_time': False,
-    'kwds': [{kwds}]})
+    'kwds': {kwds}})
 
 net_dict.update({
     'N_scaling': {N_SCALING},
