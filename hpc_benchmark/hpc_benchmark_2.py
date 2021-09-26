@@ -98,6 +98,7 @@ params = {
     'dt': 0.1,                         # simulation step
     'record_spikes': {record_spikes},  # switch to record spikes of excitatory
                                        # neurons to file
+    'rng_seed': {rng_seed},            # random number generator seed
     'path_name': '.',                  # path where all files will have to be written
     'log_file': 'logfile',             # naming scheme for the log files
 }
@@ -202,10 +203,19 @@ def build_network():
     model_params = brunel_params['model_params']
     stdp_params = brunel_params['stdp_params']
 
+    rng_seeds = list(
+            range(
+                params['rng_seed'] + 1 + params['nvp'],
+                params['rng_seed'] + 1 + (2 * params['nvp'])
+                )
+            )
+    grng_seed = params['rng_seed'] + params['nvp']
     # set global kernel parameters
     nest.SetKernelStatus({
         'total_num_virtual_procs': params['nvp'],
         'resolution': params['dt'],
+        'grng_seed': grng_seed,
+        'rng_seeds': rng_seeds,
         'overwrite_files': True})
 
     nest.message(M_INFO, 'build_network', 'Creating excitatory population.')
@@ -443,9 +453,7 @@ def get_local_nodes(nodes):
     while i < len(nodes):
         if nest.GetStatus([nodes[i]], 'local')[0]:
             yield nodes[i]
-            i += nvp
-        else:
-            i += 1
+        i += 1
 
 
 if __name__ == '__main__':
