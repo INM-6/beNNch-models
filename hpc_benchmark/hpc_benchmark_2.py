@@ -453,9 +453,7 @@ def get_local_nodes(nodes):
     while i < len(nodes):
         if nest.GetStatus([nodes[i]], 'local')[0]:
             yield nodes[i]
-            i += nvp
-        else:
-            i += 1
+        i += 1
 
 
 if __name__ == '__main__':
