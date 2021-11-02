@@ -22,7 +22,14 @@ rng_seed = int(sys.argv[8])
 t_presim = float(sys.argv[9])
 record_spikes = bool(sys.argv[10])
 
-network_params, _ = NEW_SIM_PARAMS[mam_state][0]
+if mam_state == 'ground':
+    figure = 'Fig3'
+elif mam_state == 'metastable':
+    figure = 'Fig5'
+else:
+    raise KeyError('No network state selected. Choose between "ground" and\
+                   "metastable" state in the config file.')
+network_params, _ = NEW_SIM_PARAMS[figure][0]
 
 network_params['connection_params']['K_stable'] = os.path.join(
     base_path, 'K_stable.npy')
