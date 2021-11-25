@@ -329,6 +329,17 @@ class Simulation:
         self.total_memory = self.memory()
         print("Simulated network in {0:.2f} seconds.".format(self.time_simulate))
         self.logging()
+        self.write_out_KernelStatus()
+
+    def write_out_KernelStatus(self):
+        """
+        Write out the NEST Kernel Status
+        """
+        if nest.Rank() == 0:
+            fname = 'kernel_status.txt'
+            KernelStatus = nest.GetKernelStatus()
+            with open(fname, 'w') as f:
+                f.write(json.dumps(KernelStatus))
 
     def memory(self):
         """

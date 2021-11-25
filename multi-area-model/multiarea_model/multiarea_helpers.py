@@ -44,11 +44,6 @@ from nested_dict import nested_dict
 
 import nest
 
-def write_out_KernelStatus():
-    """ Write out the NEST Kernel Status """
-    KernelStatus = nest.GetKernelStatus()
-    with open('kernel_status.txt', 'w') as file:
-        file.write(json.dumps(KernelStatus))
 
 def memory():
     """

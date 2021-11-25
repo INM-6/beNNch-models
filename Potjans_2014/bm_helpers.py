@@ -38,18 +38,15 @@ def logging(py_timers=None, memory_used=None):
                 f.write(key + ' ' + str(value) + '\n')
 
 
-def write_out_KernelStatus(fname='kernel_status.txt'):
+def write_out_KernelStatus():
     """
-    Writes out the NEST Kernel Status.
-
-    Parameters
-    ----------
-    fname
-        file name
+    Write out the NEST Kernel Status.
     """
-    KernelStatus = nest.GetKernelStatus()
-    with open(fname, 'w') as f:
-        f.write(json.dumps(KernelStatus))
+    if nest.Rank() == 0:
+        fname = 'kernel_status.txt'
+        KernelStatus = nest.GetKernelStatus()
+        with open(fname, 'w') as f:
+            f.write(json.dumps(KernelStatus))
 
 
 def memory():

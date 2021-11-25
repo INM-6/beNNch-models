@@ -75,6 +75,7 @@ References
 import numpy as np
 import os
 import sys
+import json
 import time
 import scipy.special as sp
 
@@ -371,6 +372,8 @@ def run_simulation():
     SimCPUTime = time.time() - tic
     total_memory = str(memory_thisjob())
 
+    write_out_KernelStatus()
+
     average_rate = 0.0
     if params['record_spikes']:
         average_rate = compute_rate(sr)
@@ -401,6 +404,17 @@ def run_simulation():
     with open(fn, 'w') as f:
         for key, value in d.items():
             f.write(key + ' ' + str(value) + '\n')
+
+
+def write_out_KernelStatus():
+    """
+    Write out the NEST Kernel Status
+    """
+    if nest.Rank() == 0:
+        fname = 'kernel_status.txt'
+        KernelStatus = nest.GetKernelStatus()
+        with open(fname, 'w') as f:
+            f.write(json.dumps(KernelStatus))
 
 
 def compute_rate(sr):

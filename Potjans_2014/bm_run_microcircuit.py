@@ -18,7 +18,7 @@ usually not recorded in this scenario, the evaluation part with plotting of
 from stimulus_params import stim_dict
 from network_params import net_dict
 from sim_params import sim_dict
-from bm_helpers import logging, memory
+from bm_helpers import logging, memory, write_out_KernelStatus
 import network
 import nest
 import numpy as np
@@ -127,3 +127,5 @@ print(
         mem))
 
 logging(py_timers=py_timers, memory_used=memory_used)
+
+write_out_KernelStatus()
