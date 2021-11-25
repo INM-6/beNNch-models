@@ -21,7 +21,6 @@ from sim_params import sim_dict
 from bm_helpers import logging, memory
 import network
 import nest
-import numpy as np
 import time
 time_start = time.time()
 
