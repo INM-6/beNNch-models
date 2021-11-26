@@ -75,20 +75,14 @@ class Network:
         # derive parameters based on input dictionaries
         self.__derive_parameters()
 
-        # check NEST and kernel version
+        # check NEST version
         try:
             nest.version()
             self.nest_version = '2'
         except BaseException:
             nest.__version__
             self.nest_version = '3'
-        try:
-            nest.GetKernelStatus()['sort_connections_by_source']
-            self.nest_kernel = '5g'
-        except BaseException:
-            self.nest_kernel = '4g'
-        print(f'NEST version: {self.nest_version}, '
-              f'NEST kernel: {self.nest_kernel}')
+        print(f'NEST version: {self.nest_version}')
 
         # initialize the NEST kernel
         self.__setup_nest()
@@ -124,6 +118,8 @@ class Network:
         ``nest.Simulate()`` call.
         For including this phase in measurements of the connection time,
         we induce it here explicitly by calling ``nest.Prepare()``.
+        Calling directly ``nest.Cleanup()`` afterwards breaks the simulation in
+        some NEST versions (at least in NEST 2.20.2).
 
         """
         self.__connect_neuronal_populations()
@@ -137,14 +133,15 @@ class Network:
         if self.stim_dict['dc_input']:
             self.__connect_dc_stim_input()
 
-        if self.nest_kernel == '5g':
-            nest.Prepare()
-            nest.Cleanup()
-        elif self.nest_kernel != '4g':
-            raise Exception('NEST kernel unknown.')
+        nest.Prepare()
 
     def simulate(self, t_sim):
         """ Simulates the microcircuit.
+
+        The ``nest.Simulate()`` call is here explicitly split up into its three
+        steps: ``nest.Prepare()``, ``nest.Run()``, and ``nest.Cleanup()``.
+        If this function is called after ``connect()``, the simulation is
+        already prepared and we can directly move on to ``nest.Run()``.
 
         Parameters
         ----------
@@ -155,7 +152,16 @@ class Network:
         if nest.Rank() == 0:
             print('Simulating {} ms.'.format(t_sim))
 
-        nest.Simulate(t_sim)
+        try:
+            nest.Prepare()
+        except BaseException:
+            print(
+                'nest.Prepare() has already been called after connecting the '
+                'network. '
+                'This simulate() call directly starts with nest.Run().')
+
+        nest.Run(t_sim)
+        nest.Cleanup()
 
     def get_local_spike_counter(self):
         """ Return number of local spikes """
