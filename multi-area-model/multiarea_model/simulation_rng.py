@@ -316,30 +316,22 @@ class Simulation:
 
         t4 = time.time()
         nest.Prepare()
-        nest.Run(self.pre_T)
-        self.time_init = time.time() - t4
-        self.init_memory = self.memory()
-        print("Init time in {0:.2f} seconds.".format(self.time_init))
+        self.time_network_prepare = time.time() - t4
+        print("Network preparation time in {0:.2f} seconds.".format(self.time_network_prepare))
 
         t5 = time.time()
+        nest.Run(self.pre_T)
+        self.time_presimulate = time.time() - t5
+        self.init_memory = self.memory()
+        print("Presimulation time in {0:.2f} seconds.".format(self.time_presimulate))
+
+        t6 = time.time()
         nest.Run(self.T)
         nest.Cleanup()
-        t6 = time.time()
-        self.time_simulate = t6 - t5
+        self.time_simulate = time.time() - t6
         self.total_memory = self.memory()
         print("Simulated network in {0:.2f} seconds.".format(self.time_simulate))
         self.logging()
-        self.write_out_KernelStatus()
-
-    def write_out_KernelStatus(self):
-        """
-        Write out the NEST Kernel Status
-        """
-        if nest.Rank() == 0:
-            fname = 'kernel_status.txt'
-            KernelStatus = nest.GetKernelStatus()
-            with open(fname, 'w') as f:
-                f.write(json.dumps(KernelStatus))
 
     def memory(self):
         """
@@ -356,21 +348,23 @@ class Simulation:
         Write runtime and memory for the first 30 MPI processes
         to file.
         """
-        d = {'time_kernel_prepare': self.time_kernel_prepare,
-             'time_network_local': self.time_network_local,
-             'time_network_global': self.time_network_global,
-             'time_init': self.time_init,
-             'time_simulate': self.time_simulate,
+        d = {'py_time_kernel_prepare': self.time_kernel_prepare,
+             'py_time_network_local': self.time_network_local,
+             'py_time_network_global': self.time_network_global,
+             'py_time_presimulate': self.time_presimulate,
+             'py_time_network_prepare': self.time_network_prepare,
+             'py_time_simulate': self.time_simulate,
+             'py_time_create': self.time_create,
+             'py_time_connect': self.time_connect_area + self.time_connect_cc + self.time_network_prepare,
+             'py_time_connect_area': self.time_connect_area,
+             'py_time_connect_cc': self.time_connect_cc,
              'base_memory': self.base_memory,
              'network_memory': self.network_memory,
              'init_memory': self.init_memory,
-             'total_memory': self.total_memory,
-             'time_create': self.time_create,
-             'time_connect':self.time_connect_area + self.time_connect_cc,
-             'num_connections': nest.GetKernelStatus('num_connections'),
-             'local_spike_counter': nest.GetKernelStatus('local_spike_counter')}
+             'total_memory': self.total_memory}
+        d.update(nest.GetKernelStatus())
         print(d)
-        
+
         fn = os.path.join(self.data_dir,
                           'recordings',
                           '_'.join((self.label,

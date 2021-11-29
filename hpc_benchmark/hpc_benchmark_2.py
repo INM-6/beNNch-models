@@ -383,8 +383,6 @@ def run_simulation():
     SimCPUTime = time.time() - tic
     total_memory = str(memory_thisjob())
 
-    write_out_KernelStatus()
-
     average_rate = 0.0
     if params['record_spikes']:
         average_rate = compute_rate(sr)
@@ -394,38 +392,15 @@ def run_simulation():
          'base_memory': base_memory,
          'init_memory': init_memory,
          'total_memory': total_memory,
-         'num_connections': nest.GetKernelStatus('num_connections'),
-         'local_spike_counter': nest.GetKernelStatus('local_spike_counter'),
-         'average_rate': average_rate,
-         'time_collocate_spike_data': nest.GetKernelStatus('time_collocate_spike_data'),
-         'time_communicate_spike_data': nest.GetKernelStatus('time_communicate_spike_data'),
-         'time_communicate_target_data': nest.GetKernelStatus('time_communicate_target_data'),
-         'time_deliver_spike_data': nest.GetKernelStatus('time_deliver_spike_data'),
-         'time_gather_spike_data': nest.GetKernelStatus('time_gather_spike_data'),
-         'time_gather_target_data': nest.GetKernelStatus('time_gather_target_data'),
-         'time_update': nest.GetKernelStatus('time_update'),
-         'time_communicate_prepare': nest.GetKernelStatus('time_communicate_prepare'),
-         'time_construction_connect': nest.GetKernelStatus('time_construction_connect'),
-         'time_construction_create': nest.GetKernelStatus('time_construction_create'),
-         'time_simulate': nest.GetKernelStatus('time_simulate')}
+         'average_rate': average_rate}
     d.update(build_dict)
+    d.update(nest.GetKernelStatus())
     print(d)
 
     fn = '{fn}_{rank}.dat'.format(fn=params['log_file'], rank=nest.Rank())
     with open(fn, 'w') as f:
         for key, value in d.items():
             f.write(key + ' ' + str(value) + '\n')
-
-
-def write_out_KernelStatus():
-    """
-    Write out the NEST Kernel Status
-    """
-    if nest.Rank() == 0:
-        fname = 'kernel_status.txt'
-        KernelStatus = nest.GetKernelStatus()
-        with open(fname, 'w') as f:
-            f.write(json.dumps(KernelStatus))
 
 
 def compute_rate(sr):
@@ -454,14 +429,13 @@ def lambertwm1(x):
     # Using scipy to mimic the gsl_sf_lambert_Wm1 function.
     return sp.lambertw(x, k=-1 if x < 0 else 0).real
 
+
 def get_local_nodes(nodes):
     """Generator for efficient looping over local nodes
     Assumes nodes is a continous list of gids [1, 2, 3, ...], e.g., as
     returned by Create. Only works for nodes with proxies, i.e.,
     regular neurons.
     """
-
-    nvp = nest.GetKernelStatus('total_num_virtual_procs')  # step size
 
     i = 0
     while i < len(nodes):

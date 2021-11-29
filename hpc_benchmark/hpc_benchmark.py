@@ -372,8 +372,6 @@ def run_simulation():
     SimCPUTime = time.time() - tic
     total_memory = str(memory_thisjob())
 
-    write_out_KernelStatus()
-
     average_rate = 0.0
     if params['record_spikes']:
         average_rate = compute_rate(sr)
@@ -385,36 +383,15 @@ def run_simulation():
          'total_memory': total_memory,
          'num_connections': nest.num_connections,
          'local_spike_counter': nest.local_spike_counter,
-         'average_rate': average_rate,
-         'time_collocate_spike_data': nest.kernel_status['time_collocate_spike_data'],
-         'time_communicate_spike_data': nest.kernel_status['time_communicate_spike_data'],
-         'time_communicate_target_data': nest.kernel_status['time_communicate_target_data'],
-         'time_deliver_spike_data': nest.kernel_status['time_deliver_spike_data'],
-         'time_gather_spike_data': nest.kernel_status['time_gather_spike_data'],
-         'time_gather_target_data': nest.kernel_status['time_gather_target_data'],
-         'time_update': nest.kernel_status['time_update'],
-         'time_communicate_prepare': nest.kernel_status['time_communicate_prepare'],
-         'time_construction_connect': nest.kernel_status['time_construction_connect'],
-         'time_construction_create': nest.kernel_status['time_construction_create'],
-         'time_simulate': nest.kernel_status['time_simulate']}
+         'average_rate': average_rate}
     d.update(build_dict)
+    d.update(nest.kernel_status)
     print(d)
 
     fn = '{fn}_{rank}.dat'.format(fn=params['log_file'], rank=nest.Rank())
     with open(fn, 'w') as f:
         for key, value in d.items():
             f.write(key + ' ' + str(value) + '\n')
-
-
-def write_out_KernelStatus():
-    """
-    Write out the NEST Kernel Status
-    """
-    if nest.Rank() == 0:
-        fname = 'kernel_status.txt'
-        KernelStatus = nest.GetKernelStatus()
-        with open(fname, 'w') as f:
-            f.write(json.dumps(KernelStatus))
 
 
 def compute_rate(sr):
