@@ -70,12 +70,6 @@ elif NEST_version == '3':
                          theory_spec=theory_params,
                          data_path=data_path,
                          data_folder_hash=data_folder_hash)
-# elif NEST_version == 'rng':
-#     print("NEST version rng\n")
-#     M = MultiAreaModel_rng(network_params, simulation=True,
-#                            sim_spec=sim_params,
-#                            theory=True,
-#                            theory_spec=theory_params)
 
 print(M.label)
 print(M.simulation.label)
