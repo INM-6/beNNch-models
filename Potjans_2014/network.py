@@ -75,10 +75,14 @@ class Network:
         # derive parameters based on input dictionaries
         self.__derive_parameters()
 
-	# Check whether NEST 2 or 3 is used. No straight way of checking this is
-        # available. But PrintNetwork was removed in NEST 3, so checking for its
-        # existence should suffice.
-        self.USING_NEST_3 = 'PrintNetwork' not in dir(nest)
+        # check NEST version
+        try:
+            nest.version()
+            self.nest_version = '2'
+        except BaseException:
+            nest.__version__
+            self.nest_version = '3'
+        print(f'NEST version: {self.nest_version}')
 
         # initialize the NEST kernel
         self.__setup_nest()
@@ -114,6 +118,8 @@ class Network:
         ``nest.Simulate()`` call.
         For including this phase in measurements of the connection time,
         we induce it here explicitly by calling ``nest.Prepare()``.
+        Calling directly ``nest.Cleanup()`` afterwards breaks the simulation in
+        some NEST versions (at least in NEST 2.20.2).
 
         """
         self.__connect_neuronal_populations()
@@ -127,12 +133,15 @@ class Network:
         if self.stim_dict['dc_input']:
             self.__connect_dc_stim_input()
 
-        if self.USING_NEST_3:
-            nest.Prepare()
-            nest.Cleanup()
+        nest.Prepare()
 
     def simulate(self, t_sim):
         """ Simulates the microcircuit.
+
+        The ``nest.Simulate()`` call is here explicitly split up into its three
+        steps: ``nest.Prepare()``, ``nest.Run()``, and ``nest.Cleanup()``.
+        If this function is called after ``connect()``, the simulation is
+        already prepared and we can directly move on to ``nest.Run()``.
 
         Parameters
         ----------
@@ -143,7 +152,16 @@ class Network:
         if nest.Rank() == 0:
             print('Simulating {} ms.'.format(t_sim))
 
-        nest.Simulate(t_sim)
+        try:
+            nest.Prepare()
+        except BaseException:
+            print(
+                'nest.Prepare() has already been called after connecting the '
+                'network. '
+                'This simulate() call directly starts with nest.Run().')
+
+        nest.Run(t_sim)
+        nest.Cleanup()
 
     def get_local_spike_counter(self):
         """ Return number of local spikes """
@@ -154,8 +172,8 @@ class Network:
         return nest.GetKernelStatus('network_size')
 
     def get_total_sim_time(self):
-                """ Return total sim time """
-                return self.sim_dict['t_presim'] + self.sim_dict['t_sim']
+        """ Return total sim time """
+        return self.sim_dict['t_presim'] + self.sim_dict['t_sim']
 
     def evaluate(self, raster_plot_interval, firing_rates_interval):
         """ Displays simulation results.
@@ -292,7 +310,7 @@ class Network:
             {'local_num_threads': self.sim_dict['local_num_threads']})
         N_vp = nest.GetKernelStatus('total_num_virtual_procs')
 
-        if self.USING_NEST_3:
+        if self.nest_version == '3':
             rng_seed = self.sim_dict['rng_seed']
 
             if nest.Rank() == 0:
@@ -307,8 +325,8 @@ class Network:
                 'overwrite_files': self.sim_dict['overwrite_files'],
                 'print_time': self.sim_dict['print_time']}
 
-        else:
-            master_seed = self.sim_dict['master_seed']
+        elif self.nest_version == '2':
+            master_seed = self.sim_dict['rng_seed']
             grng_seed = master_seed + N_vp
             rng_seeds = (master_seed + N_vp + 1 + np.arange(N_vp)).tolist()
 
@@ -332,6 +350,9 @@ class Network:
                 'overwrite_files': self.sim_dict['overwrite_files'],
                 'print_time': self.sim_dict['print_time']}
 
+        else:
+            raise Exception('NEST version unknown.')
+
         if 'kwds' in self.sim_dict:
             kernel_dict.update(self.sim_dict['kwds'])
         nest.SetKernelStatus(kernel_dict)
@@ -353,7 +374,7 @@ class Network:
             population = nest.Create(self.net_dict['neuron_model'],
                                      self.num_neurons[i])
 
-            if self.USING_NEST_3:
+            if self.nest_version == '3':
                 population.set(
                     tau_syn_ex=self.net_dict['neuron_params']['tau_syn'],
                     tau_syn_in=self.net_dict['neuron_params']['tau_syn'],
@@ -362,27 +383,30 @@ class Network:
                     V_reset=self.net_dict['neuron_params']['V_reset'],
                     t_ref=self.net_dict['neuron_params']['t_ref'],
                     I_e=self.DC_amp[i])
-            else:
+            elif self.nest_version == '2':
                 nest.SetStatus(
                     population, {
                         'tau_syn_ex': self.net_dict['neuron_params']['tau_syn'],
                         'tau_syn_in': self.net_dict['neuron_params']['tau_syn'],
                         'E_L': self.net_dict['neuron_params']['E_L'],
                         'V_th': self.net_dict['neuron_params']['V_th'],
-                        'V_reset':  self.net_dict['neuron_params']['V_reset'],
+                        'V_reset': self.net_dict['neuron_params']['V_reset'],
                         't_ref': self.net_dict['neuron_params']['t_ref'],
                         'I_e': self.DC_amp[i]
-                        }
-                    )
+                    }
+                )
+            else:
+                raise Exception('NEST version unknown.')
 
             if self.net_dict['V0_type'] == 'optimized':
-                if self.USING_NEST_3:
-                    population.set(V_m=nest.random.normal(
-                        self.net_dict['neuron_params']['V0_mean']['optimized'][i],
-                        self.net_dict['neuron_params']['V0_std']['optimized'][i]))
-                else:
-                    for thread in \
-                            np.arange(nest.GetKernelStatus('local_num_threads')):
+                if self.nest_version == '3':
+                    population.set(
+                        V_m=nest.random.normal(
+                            self.net_dict['neuron_params']['V0_mean']['optimized'][i],
+                            self.net_dict['neuron_params']['V0_std']['optimized'][i]))
+                elif self.nest_version == '2':
+                    for thread in np.arange(
+                            nest.GetKernelStatus('local_num_threads')):
                         # Using GetNodes is a work-around until NEST 3.0 is
                         # released. It will issue a deprecation warning.
                         local_nodes = nest.GetNodes(
@@ -393,7 +417,8 @@ class Network:
                         )[0]
                         vp = nest.GetStatus(local_nodes)[0]['vp']
                         # vp is the same for all local nodes on the same thread
-                        local_pop = list(set(local_nodes).intersection(population))
+                        local_pop = list(
+                            set(local_nodes).intersection(population))
                         nest.SetStatus(
                             local_pop, 'V_m', self.pyrngs[vp].normal(
                                 self.net_dict
@@ -402,27 +427,35 @@ class Network:
                                 ['neuron_params']['V0_std']['optimized'][i],
                                 len(local_pop))
                         )
+                else:
+                    raise Exception('NEST version unknown.')
+
             elif self.net_dict['V0_type'] == 'original':
-                if self.USING_NEST_3:
+                if self.nest_version == '3':
                     population.set(V_m=nest.random.normal(
                         self.net_dict['neuron_params']['V0_mean']['original'],
                         self.net_dict['neuron_params']['V0_std']['original']))
-                else:
-                    for thread in np.arange(nest.GetKernelStatus('local_num_threads')):
+                elif self.nest_version == '2':
+                    for thread in np.arange(
+                            nest.GetKernelStatus('local_num_threads')):
                         local_nodes = nest.GetNodes(
                             [0], {
                                 'model': self.net_dict['neuron_model'],
                                 'thread': thread
-                                }, local_only=True
-                            )[0]
+                            }, local_only=True
+                        )[0]
                         vp = nest.GetStatus(local_nodes)[0]['vp']
-                        local_pop = list(set(local_nodes).intersection(population))
+                        local_pop = list(
+                            set(local_nodes).intersection(population))
                         nest.SetStatus(
-                            local_pop, 'V_m', self.pyrngs[vp].normal(
+                            local_pop,
+                            'V_m',
+                            self.pyrngs[vp].normal(
                                 self.net_dict['neuron_params']['V0_mean']['original'],
                                 self.net_dict['neuron_params']['V0_std']['original'],
-                                len(local_nodes))
-                                )
+                                len(local_nodes)))
+                else:
+                    raise Exception('NEST version unknown.')
 
             else:
                 raise Exception(
@@ -436,11 +469,13 @@ class Network:
             fn = os.path.join(self.data_path, 'population_nodeids.dat')
             with open(fn, 'w+') as f:
                 for pop in self.pops:
-                    if self.USING_NEST_3:
+                    if self.nest_version == '3':
                         f.write('{} {}\n'.format(pop[0].global_id,
                                                  pop[-1].global_id))
-                    else:
+                    elif self.nest_version == '2':
                         f.write('{} {}\n'.format(pop[0], pop[-1]))
+                    else:
+                        raise Exception('NEST version unknown.')
 
     def __create_recording_devices(self):
         """ Creates one recording device of each kind per population.
@@ -454,31 +489,50 @@ class Network:
         if 'spike_recorder' in self.sim_dict['rec_dev']:
             if nest.Rank() == 0:
                 print('  Creating spike recorders.')
-            if self.USING_NEST_3:
-                sd_dict = {'record_to': 'ascii',
-                           'label': os.path.join(self.data_path, 'spike_recorder')}
+            if self.nest_version == '3':
+                sd_dict = {
+                    'record_to': 'ascii',
+                    'label': os.path.join(
+                        self.data_path,
+                        'spike_recorder')}
                 self.spike_recorders = nest.Create('spike_recorder',
                                                    n=self.num_pops,
                                                    params=sd_dict)
-            else:
+            elif self.nest_version == '2':
                 sd_dict = {
                     'withgid': True,
                     'withtime': True,
                     'to_memory': False,
                     'to_file': True,
                     'label': os.path.join(self.data_path, 'spike_recorder')
-                    }
+                }
                 self.spike_recorders = nest.Create('spike_detector',
                                                    n=self.num_pops,
                                                    params=sd_dict)
 
+            else:
+                raise Exception('NEST version unknown.')
+
         if 'voltmeter' in self.sim_dict['rec_dev']:
             if nest.Rank() == 0:
                 print('  Creating voltmeters.')
-            vm_dict = {'interval': self.sim_dict['rec_V_int'],
-                       'record_to': 'ascii',
-                       'record_from': ['V_m'],
-                       'label': os.path.join(self.data_path, 'voltmeter')}
+
+            if self.nest_version == '3':
+                vm_dict = {
+                    'interval': self.sim_dict['rec_V_int'],
+                    'record_to': 'ascii',
+                    'record_from': ['V_m'],
+                    'label': os.path.join(self.data_path, 'voltmeter')}
+            elif self.nest_version == '2':
+                vm_dict = {
+                    'withgid': True,
+                    'withtime': True,
+                    'to_memory': False,
+                    'to_file': True,
+                    'label': os.path.join(self.data_path, 'voltmeter')}
+            else:
+                raise Exception('NEST version unknown.')
+
             self.voltmeters = nest.Create('voltmeter',
                                           n=self.num_pops,
                                           params=vm_dict)
@@ -496,13 +550,15 @@ class Network:
 
         self.poisson_bg_input = nest.Create('poisson_generator',
                                             n=self.num_pops)
-        if self.USING_NEST_3:
+        if self.nest_version == '3':
             self.poisson_bg_input.rate = \
                 self.net_dict['bg_rate'] * self.ext_indegrees
-        else:
-            rate = self.net_dict['bg_rate'] * self.ext_indegrees 
-            for i, r in enumerate(rate): 
+        elif self.nest_version == '2':
+            rate = self.net_dict['bg_rate'] * self.ext_indegrees
+            for i, r in enumerate(rate):
                 nest.SetStatus([self.poisson_bg_input[i]], {'rate': r})
+        else:
+            raise Exception('NEST version unknown.')
 
     def __create_thalamic_stim_input(self):
         """ Creates the thalamic neuronal population if specified in
@@ -521,17 +577,24 @@ class Network:
             'parrot_neuron', n=self.stim_dict['num_th_neurons'])
 
         self.poisson_th = nest.Create('poisson_generator')
-        if self.USING_NEST_3:
+        if self.nest_version == '3':
             self.poisson_th.set(
                 rate=self.stim_dict['th_rate'],
                 start=self.stim_dict['th_start'],
-                stop=(self.stim_dict['th_start'] + self.stim_dict['th_duration']))
-        else:
+                stop=(
+                    self.stim_dict['th_start'] +
+                    self.stim_dict['th_duration']))
+        elif self.nest_version == '2':
             nest.SetStatus(
                 self.poisson_th,
-                params={'rate': self.stim_dict['th_rate'],
-                        'start': self.stim_dict['th_start'],
-                        'stop': (self.stim_dict['th_start'] + self.stim_dict['th_duration'])})
+                params={
+                    'rate': self.stim_dict['th_rate'],
+                    'start': self.stim_dict['th_start'],
+                    'stop': (
+                        self.stim_dict['th_start'] +
+                        self.stim_dict['th_duration'])})
+        else:
+            raise Exception('NEST version unknown.')
 
     def __create_dc_stim_input(self):
         """ Creates DC generators for external stimulation if specified
@@ -545,14 +608,14 @@ class Network:
         if nest.Rank() == 0:
             print('Creating DC generators for external stimulation.')
 
-        if self.USING_NEST_3:
+        if self.nest_version == '3':
             dc_dict = {'amplitude': dc_amp_stim,
                        'start': self.stim_dict['dc_start'],
                        'stop': (self.stim_dict['dc_start'] +
                                 self.stim_dict['dc_dur'])}
             self.dc_stim_input = nest.Create('dc_generator', n=self.num_pops,
                                              params=dc_dict)
-        else:
+        elif self.nest_version == '2':
             dc_dict = {'start': self.stim_dict['dc_start'],
                        'stop': (self.stim_dict['dc_start'] +
                                 self.stim_dict['dc_dur'])}
@@ -560,8 +623,10 @@ class Network:
             for amp in dc_amp_stim:
                 dc_dict.update({'amplitude': amp})
                 dc = nest.Create('dc_generator', n=self.num_pops,
-                                                 params=dc_dict)
+                                 params=dc_dict)
                 self.dc_stim_input.append(dc)
+        else:
+            raise Exception('NEST version unknown.')
 
     def __connect_neuronal_populations(self):
         """ Creates the recurrent connections between neuronal populations. """
@@ -575,7 +640,7 @@ class Network:
                         'rule': 'fixed_total_number',
                         'N': self.num_synapses[i][j]}
 
-                    if self.USING_NEST_3:
+                    if self.nest_version == '3':
                         if self.weight_matrix_mean[i][j] < 0:
                             w_min = np.NINF
                             w_max = 0.0
@@ -588,42 +653,42 @@ class Network:
                             'weight': nest.math.redraw(
                                 nest.random.normal(
                                     mean=self.weight_matrix_mean[i][j],
-                                    std=abs(self.weight_matrix_mean[i][j] *
-                                            self.net_dict['weight_rel_std'])),
+                                    std=abs(
+                                        self.weight_matrix_mean[i][j] *
+                                        self.net_dict['weight_rel_std'])),
                                 min=w_min,
                                 max=w_max),
                             'delay': nest.math.redraw(
                                 nest.random.normal(
                                     mean=self.net_dict['delay_matrix_mean'][i][j],
-                                    std=(self.net_dict['delay_matrix_mean'][i][j] *
-                                         self.net_dict['delay_rel_std'])),
+                                    std=(
+                                        self.net_dict['delay_matrix_mean'][i][j] *
+                                        self.net_dict['delay_rel_std'])),
                                 min=self.sim_resolution,
                                 max=np.Inf)}
-                    else:
-                        self.weight_mat = helpers.get_weight(
-                            self.net_dict['PSP_mean_matrix'], self.net_dict
-                            )
-                        self.weight_mat_std = self.net_dict['PSP_std_matrix']
-                        weight = self.weight_mat[i][j]
-                        w_sd = abs(weight * self.weight_mat_std[i][j])
+                    elif self.nest_version == '2':
                         syn_dict = {
                             'model': self.net_dict['synapse_type'],
                             'weight': {
-                                'distribution': 'normal_clipped', 'mu': weight,
-                                'sigma': w_sd
-                                },
+                                'distribution': 'normal_clipped',
+                                'mu': self.weight_matrix_mean[i][j],
+                                'sigma': abs(
+                                    self.weight_matrix_mean[i][j] *
+                                    self.net_dict['weight_rel_std']),
+                            },
                             'delay': {
                                 'distribution': 'normal_clipped',
                                 'mu': self.net_dict['delay_matrix_mean'][i][j],
-                                'sigma': (self.net_dict['delay_matrix_mean'][i][j] *
-                                          self.net_dict['delay_rel_std']),
-                                'low': self.sim_resolution
-                                }
-                            }
-                        if weight < 0:
+                                'sigma': (
+                                    self.net_dict['delay_matrix_mean'][i][j] *
+                                    self.net_dict['delay_rel_std']),
+                                'low': self.sim_resolution}}
+                        if self.weight_matrix_mean[i][j] < 0:
                             syn_dict['weight']['high'] = 0.0
                         else:
                             syn_dict['weight']['low'] = 0.0
+                    else:
+                        raise Exception('NEST version unknown.')
 
                     nest.Connect(
                         source_pop, target_pop,
@@ -637,15 +702,19 @@ class Network:
 
         for i, target_pop in enumerate(self.pops):
             if 'spike_recorder' in self.sim_dict['rec_dev']:
-                if self.USING_NEST_3:
+                if self.nest_version == '3':
                     nest.Connect(target_pop, self.spike_recorders[i])
-                else:
+                elif self.nest_version == '2':
                     nest.Connect(target_pop, [self.spike_recorders[i]])
-            if 'voltmeter' in self.sim_dict['rec_dev']:
-                if self.USING_NEST_3:
-                    nest.Connect(self.voltmeters[i], target_pop)
                 else:
-                    print('not implemented')
+                    raise Exception('NEST version unknown.')
+            if 'voltmeter' in self.sim_dict['rec_dev']:
+                if self.nest_version == '3':
+                    nest.Connect(self.voltmeters[i], target_pop)
+                elif self.nest_version == '2':
+                    nest.Connect([self.voltmeters[i]], target_pop)
+                else:
+                    raise Exception('NEST version unknown.')
 
     def __connect_poisson_bg_input(self):
         """ Connects the Poisson generators to the microcircuit."""
@@ -655,8 +724,7 @@ class Network:
         for i, target_pop in enumerate(self.pops):
             conn_dict_poisson = {'rule': 'all_to_all'}
 
-
-            if self.USING_NEST_3:
+            if self.nest_version == '3':
                 syn_dict_poisson = {
                     'synapse_model': self.net_dict['synapse_type'],
                     'weight': self.weight_ext,
@@ -665,7 +733,7 @@ class Network:
                     self.poisson_bg_input[i], target_pop,
                     conn_spec=conn_dict_poisson,
                     syn_spec=syn_dict_poisson)
-            else:
+            elif self.nest_version == '2':
                 syn_dict_poisson = {
                     'model': self.net_dict['synapse_type'],
                     'weight': self.weight_ext,
@@ -674,6 +742,8 @@ class Network:
                     [self.poisson_bg_input[i]], target_pop,
                     conn_spec=conn_dict_poisson,
                     syn_spec=syn_dict_poisson)
+            else:
+                raise Exception('NEST version unknown.')
 
     def __connect_thalamic_stim_input(self):
         """ Connects the thalamic input to the neuronal populations."""
@@ -683,33 +753,51 @@ class Network:
         # connect Poisson input to thalamic population
         nest.Connect(self.poisson_th, self.thalamic_population)
 
-        if self.USING_NEST_3:
-            # connect thalamic population to neuronal populations
-            for i, target_pop in enumerate(self.pops):
-                conn_dict_th = {
-                    'rule': 'fixed_total_number',
-                    'N': self.num_th_synapses[i]}
+        # connect thalamic population to neuronal populations
+        for i, target_pop in enumerate(self.pops):
+            conn_dict_th = {
+                'rule': 'fixed_total_number',
+                'N': self.num_th_synapses[i]}
 
+            if self.nest_version == '3':
                 syn_dict_th = {
                     'weight': nest.math.redraw(
                         nest.random.normal(
                             mean=self.weight_th,
-                            std=self.weight_th * self.net_dict['weight_rel_std']),
+                            std=self.weight_th *
+                            self.net_dict['weight_rel_std']),
                         min=0.0,
                         max=np.Inf),
                     'delay': nest.math.redraw(
                         nest.random.normal(
                             mean=self.stim_dict['delay_th_mean'],
-                            std=(self.stim_dict['delay_th_mean'] *
-                                 self.stim_dict['delay_th_rel_std'])),
+                            std=(
+                                self.stim_dict['delay_th_mean'] *
+                                self.stim_dict['delay_th_rel_std'])),
                         min=self.sim_resolution,
                         max=np.Inf)}
 
-                nest.Connect(
-                    self.thalamic_population, target_pop,
-                    conn_spec=conn_dict_th, syn_spec=syn_dict_th)
-        else:
-            print('Not implemented')
+            elif self.nest_version == '2':
+                syn_dict_th = {
+                    'weight': {
+                        'distribution': 'normal_clipped',
+                        'mu': self.weight_th,
+                        'sigma': self.weight_th *
+                        self.net_dict['weight_rel_std'],
+                        'low': 0.0},
+                    'delay': {
+                        'distribution': 'normal_clipped',
+                        'mu': self.stim_dict['delay_th_mean'],
+                        'sigma': (
+                            self.stim_dict['delay_th_mean'] *
+                            self.stim_dict['delay_th_rel_std']),
+                        'low': self.sim_resolution}}
+            else:
+                raise Exception('NEST version unknown.')
+
+            nest.Connect(
+                self.thalamic_population, target_pop,
+                conn_spec=conn_dict_th, syn_spec=syn_dict_th)
 
     def __connect_dc_stim_input(self):
         """ Connects the DC generators to the neuronal populations. """
