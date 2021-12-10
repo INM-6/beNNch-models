@@ -22,7 +22,7 @@ params = {
 }
 ```
 
-The corresponding `subsituteset` of the JUBE benchmarking file then looks as follows:
+The corresponding `subsituteset` of the [JUBE benchmarking file](https://github.com/INM-6/beNNch/blob/main/benchmarks/hpc_benchmark_31.yaml) then looks as follows:
 
 ```yaml
 substituteset:
