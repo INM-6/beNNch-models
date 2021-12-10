@@ -57,6 +57,8 @@ net_dict.update({
 py_timers = {}
 memory_used = {}
 
+memory_used['base_memory'] = memory()
+
 t0 = time.time()
 net = network.Network(sim_dict, net_dict, stim_dict)
 t1 = time.time()
@@ -65,6 +67,7 @@ py_timers['py_time_network'] = t1 - t0
 net.create()
 t2 = time.time()
 py_timers['py_time_create'] = t2 - t1
+memory_used['node_memory'] = memory()
 
 net.connect()
 t3 = time.time()
