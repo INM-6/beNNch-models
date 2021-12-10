@@ -53,11 +53,16 @@ On the python level several blocks of code are measured. These blocks are timed 
     * This is the actual simulation phase. This timer is a wrapper around `nest.Simulate(t_sim)`
 
 Furthermore it is useful to write out some information of memory consumption.
-* network_memory
+
+* base\_memory
+    * Used memory before any NEST related operation has been done.
+* node\_memory
+    * Used memory after Creation of all nodes.
+* network\_memory
     * Used memory after Connection of all nodes.
-* init_memory
+* init\_memory
     * Used memory after Presimulation.
-* total_memory
+* total\_memory
     * Used memory after Simulation has finished.
 
 ### Output
