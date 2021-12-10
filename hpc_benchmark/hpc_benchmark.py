@@ -379,21 +379,9 @@ def run_simulation():
          'base_memory': base_memory,
          'init_memory': init_memory,
          'total_memory': total_memory,
-         'num_connections': nest.num_connections,
-         'local_spike_counter': nest.local_spike_counter,
-         'average_rate': average_rate,
-         'time_collocate_spike_data': nest.kernel_status['time_collocate_spike_data'],
-         'time_communicate_spike_data': nest.kernel_status['time_communicate_spike_data'],
-         'time_communicate_target_data': nest.kernel_status['time_communicate_target_data'],
-         'time_deliver_spike_data': nest.kernel_status['time_deliver_spike_data'],
-         'time_gather_spike_data': nest.kernel_status['time_gather_spike_data'],
-         'time_gather_target_data': nest.kernel_status['time_gather_target_data'],
-         'time_update': nest.kernel_status['time_update'],
-         'time_communicate_prepare': nest.kernel_status['time_communicate_prepare'],
-         'time_construction_connect': nest.kernel_status['time_construction_connect'],
-         'time_construction_create': nest.kernel_status['time_construction_create'],
-         'time_simulate': nest.kernel_status['time_simulate']}
+         'average_rate': average_rate}
     d.update(build_dict)
+    d.update(nest.kernel_status)
     print(d)
 
     fn = '{fn}_{rank}.dat'.format(fn=params['log_file'], rank=nest.Rank())

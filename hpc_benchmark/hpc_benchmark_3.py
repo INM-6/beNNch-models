@@ -379,21 +379,9 @@ def run_simulation():
          'base_memory': base_memory,
          'init_memory': init_memory,
          'total_memory': total_memory,
-         'num_connections': nest.GetKernelStatus('num_connections'),
-         'local_spike_counter': nest.GetKernelStatus('local_spike_counter'),
-         'average_rate': average_rate,
-         'time_collocate_spike_data': nest.GetKernelStatus('time_collocate_spike_data'),
-         'time_communicate_spike_data': nest.GetKernelStatus('time_communicate_spike_data'),
-         'time_communicate_target_data': nest.GetKernelStatus('time_communicate_target_data'),
-         'time_deliver_spike_data': nest.GetKernelStatus('time_deliver_spike_data'),
-         'time_gather_spike_data': nest.GetKernelStatus('time_gather_spike_data'),
-         'time_gather_target_data': nest.GetKernelStatus('time_gather_target_data'),
-         'time_update': nest.GetKernelStatus('time_update'),
-         'time_communicate_prepare': nest.GetKernelStatus('time_communicate_prepare'),
-         'time_construction_connect': nest.GetKernelStatus('time_construction_connect'),
-         'time_construction_create': nest.GetKernelStatus('time_construction_create'),
-         'time_simulate': nest.GetKernelStatus('time_simulate')}
+         'average_rate': average_rate}
     d.update(build_dict)
+    d.update(nest.GetKernelStatus())
     print(d)
 
     fn = '{fn}_{rank}.dat'.format(fn=params['log_file'], rank=nest.Rank())
