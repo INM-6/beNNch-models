@@ -55,15 +55,15 @@ On the python level several blocks of code are measured. These blocks are timed 
 Furthermore it is useful to write out some information of memory consumption.
 
 * base\_memory
-    * Used memory before any NEST related operation has been done.
+    * Memory consumption before any NEST related operation has been done.
 * node\_memory
-    * Used memory after Creation of all nodes.
+    * Memory consumption after Creation of all nodes.
 * network\_memory
-    * Used memory after Connection of all nodes.
+    * Memory consumption after Connection of all nodes.
 * init\_memory
-    * Used memory after Presimulation.
+    * Memory consumption after Presimulation.
 * total\_memory
-    * Used memory after Simulation has finished.
+    * Memory consumption after Simulation has finished.
 
 ### Output
 
