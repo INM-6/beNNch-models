@@ -379,8 +379,6 @@ def run_simulation():
          'base_memory': base_memory,
          'init_memory': init_memory,
          'total_memory': total_memory,
-         'num_connections': nest.num_connections,
-         'local_spike_counter': nest.local_spike_counter,
          'average_rate': average_rate}
     d.update(build_dict)
     d.update(nest.kernel_status)
