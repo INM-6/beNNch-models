@@ -344,6 +344,19 @@ def build_network():
         nest.Connect(local_neurons[:brunel_params['Nrec']], E_detector,
                      'all_to_all', 'static_synapse_hpc')
 
+    # ``nest.Connect()`` calls which sets up the postsynaptic connectivity.
+    # Since the introduction of the 5g kernel in NEST 2.16.0 the full
+    # connection infrastructure including presynaptic connectivity is set up
+    # afterwards in the preparation phase of the simulation.
+    # The preparation phase is usually induced by the first
+    # ``nest.Simulate()`` call.
+    # For including this phase in measurements of the connection time,
+    # we induce it here explicitly by calling ``nest.Prepare()``.
+    # Calling directly ``nest.Cleanup()`` afterwards breaks the simulation in
+    # some NEST versions (at least in NEST 2.20.2).
+
+    nest.Prepare()
+
     # read out time used for building
     BuildEdgeTime = time.time() - tic
     network_memory = str(memory_thisjob())
@@ -369,14 +382,32 @@ def run_simulation():
 
     tic = time.time()
 
-    nest.Simulate(params['presimtime'])
+    try:
+        nest.Prepare()
+    except BaseException:
+        print(
+            'nest.Prepare() has already been called after connecting the '
+            'network. '
+            'This simulate() call directly starts with nest.Run().')
 
-    PreparationTime = time.time() - tic
+    nest.Run(params['presimtime'])
+    nest.Cleanup()
+
+    PresimCPUTime = time.time() - tic
     init_memory = str(memory_thisjob())
 
     tic = time.time()
 
-    nest.Simulate(params['simtime'])
+    try:
+        nest.Prepare()
+    except BaseException:
+        print(
+            'nest.Prepare() has already been called after connecting the '
+            'network. '
+            'This simulate() call directly starts with nest.Run().')
+
+    nest.Run(params['simtime'])
+    nest.Cleanup()
 
     SimCPUTime = time.time() - tic
     total_memory = str(memory_thisjob())
@@ -385,7 +416,7 @@ def run_simulation():
     if params['record_spikes']:
         average_rate = compute_rate(sr)
 
-    d = {'py_time_presimulate': PreparationTime,
+    d = {'py_time_presimulate': PresimCPUTime,
          'py_time_simulate': SimCPUTime,
          'base_memory': base_memory,
          'init_memory': init_memory,
@@ -417,9 +448,17 @@ def compute_rate(sr):
 
 
 def memory_thisjob():
-    """Wrapper to obtain current memory usage"""
-    nest.ll_api.sr('memory_thisjob')
-    return nest.ll_api.spp()
+    """
+    Use NEST's memory wrapper function to record used memory.
+    """
+    try:
+        mem = nest.ll_api.sli_func('memory_thisjob')
+    except AttributeError:
+        mem = nest.sli_func('memory_thisjob')
+    if isinstance(mem, dict):
+        return mem['heap']
+    else:
+        return mem
 
 
 def lambertwm1(x):
