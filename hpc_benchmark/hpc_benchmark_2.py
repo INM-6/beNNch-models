@@ -448,9 +448,17 @@ def compute_rate(sr):
 
 
 def memory_thisjob():
-    """Wrapper to obtain current memory usage"""
-    nest.ll_api.sr('memory_thisjob')
-    return nest.ll_api.spp()
+    """
+    Use NEST's memory wrapper function to record used memory.
+    """
+    try:
+        mem = nest.ll_api.sli_func('memory_thisjob')
+    except AttributeError:
+        mem = nest.sli_func('memory_thisjob')
+    if isinstance(mem, dict):
+        return mem['heap']
+    else:
+        return mem
 
 
 def lambertwm1(x):
