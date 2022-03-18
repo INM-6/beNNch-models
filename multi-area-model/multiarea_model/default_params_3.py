@@ -48,6 +48,8 @@ sim_params = {
     'num_processes': 1,
     # no. of threads per MPI process':
     'local_num_threads': 1,
+    # structure aware neuron distribution:
+    'morph': False,
     # Areas represented in the network
     'areas_simulated': complete_area_list,
 }
