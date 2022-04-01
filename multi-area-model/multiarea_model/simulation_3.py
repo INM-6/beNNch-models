@@ -376,10 +376,12 @@ class Simulation:
                                'network_gids.txt'), 'w') as f:
             for area in self.areas:
                 for pop in self.network.structure[area.name]:
+                    first_id = area.gids[pop][0].get()['global_id']
+                    last_id = area.gids[pop][-1].get()['global_id']
                     f.write("{area},{pop},{g0},{g1}\n".format(area=area.name,
                                                               pop=pop,
-                                                              g0=area.gids[pop][0],
-                                                              g1=area.gids[pop][1]))
+                                                              g0=first_id,
+                                                              g1=last_id))
 
     def register_runtime(self):
         if sumatra_found:
