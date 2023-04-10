@@ -78,7 +78,7 @@ import time
 import scipy.special as sp
 
 import nest
-import nest.raster_plot
+# import nest.raster_plot
 
 M_INFO = 10
 M_ERROR = 30
