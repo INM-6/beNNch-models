@@ -48,11 +48,11 @@ sim_dict.update({
     'kwds': {kwds}})
 
 net_dict.update({
-    'N_scaling': {N_SCALING},
-    'K_scaling': {K_SCALING},
-    'poisson_input': {POISSON_INPUT},
-    'V0_type': {V0_TYPE},
-    'synapse_type': {SYNAPSE_TYPE}})
+    'N_scaling': {scale_N},
+    'K_scaling': {scale_K},
+    'poisson_input': {poisson_input},
+    'V0_type': {V0_type},
+    'synapse_type': {synapse_type}})
 
 py_timers = {}
 memory_used = {}

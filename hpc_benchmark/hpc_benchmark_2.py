@@ -90,7 +90,7 @@ M_ERROR = 30
 
 params = {
     'nvp': {num_vps},                  # total number of virtual processes
-    'scale': {N_SCALING},              # scaling factor of the network size
+    'scale': {scale},              # scaling factor of the network size
                                        # total network size = scale*11250 neurons
     'simtime': {model_time_sim},       # total simulation time in ms
     'presimtime': {model_time_presim}, # simulation time until reaching equilibrium
