@@ -90,7 +90,8 @@ M_ERROR = 30
 
 params = {
     'nvp': {num_vps},                  # total number of virtual processes
-    'scale': {scale},              # scaling factor of the network size
+    'num_threads': {threads_per_task}, # total number of threads per processes
+    'scale': {scale},                  # scaling factor of the network size
                                        # total network size = scale*11250 neurons
     'simtime': {model_time_sim},       # total simulation time in ms
     'presimtime': {model_time_presim}, # simulation time until reaching equilibrium
@@ -211,7 +212,7 @@ def build_network():
     grng_seed = params['rng_seed'] + params['nvp']
     # set global kernel parameters
     nest.SetKernelStatus({
-        'total_num_virtual_procs': params['nvp'],
+        'total_num_virtual_procs': params['num_threads'],
         'resolution': params['dt'],
         'grng_seed': grng_seed,
         'rng_seeds': rng_seeds,
