@@ -89,8 +89,8 @@ M_ERROR = 30
 # Define all relevant parameters: changes should be made here
 
 params = {
-    'nvp': {num_vps},                  # total number of virtual processes
-    'scale': {scale},              # scaling factor of the network size
+    'num_threads': {threads_per_task}, # total number of threads per processes
+    'scale': {scale},                  # scaling factor of the network size
                                        # total network size = scale*11250 neurons
     'simtime': {model_time_sim},       # total simulation time in ms
     'presimtime': {model_time_presim}, # simulation time until reaching equilibrium
@@ -203,7 +203,7 @@ def build_network():
     stdp_params = brunel_params['stdp_params']
 
     # set global kernel parameters
-    nest.SetKernelStatus({'total_num_virtual_procs': params['nvp'],
+    nest.SetKernelStatus({'local_num_threads': params['num_threads'],
                           'resolution': params['dt'],
                           'rng_seed': params['rng_seed'],
                           'overwrite_files': True})
@@ -312,7 +312,7 @@ def build_network():
                  {'synapse_model': 'syn_in'})
 
     if params['record_spikes']:
-        if params['nvp'] != 1:
+        if params['num_threads'] != 1:
             local_neurons = nest.GetLocalNodeCollection(E_neurons)
             # GetLocalNodeCollection returns a stepped composite NodeCollection, which
             # cannot be sliced. In order to allow slicing it later on, we're creating a
