@@ -212,7 +212,7 @@ def build_network():
     grng_seed = params['rng_seed'] + params['nvp']
     # set global kernel parameters
     nest.SetKernelStatus({
-        'total_num_virtual_procs': params['num_threads'],
+        'local_num_threads': params['num_threads'],
         'resolution': params['dt'],
         'grng_seed': grng_seed,
         'rng_seeds': rng_seeds,
