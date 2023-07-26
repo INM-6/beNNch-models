@@ -89,7 +89,7 @@ M_ERROR = 30
 # Define all relevant parameters: changes should be made here
 
 params = {
-    'nvp': {num_tasks},                  # total number of virtual processes
+    'nvp': {num_vps},                  # total number of virtual processes
     'num_threads': {threads_per_task}, # total number of threads per processes
     'scale': {scale},                  # scaling factor of the network size
                                        # total network size = scale*11250 neurons
