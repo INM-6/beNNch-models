@@ -395,7 +395,7 @@ def run_simulation():
     if params['record_spikes']:
         average_rate = compute_rate(sr)
 
-    d = {'py_time_init': InitTime,
+    d = {'py_time_network_prepare': InitTime,
          'py_time_presimulate': PresimTime,
          'py_time_simulate': SimCPUTime,
          'base_memory': base_memory,
