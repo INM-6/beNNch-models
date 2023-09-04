@@ -370,26 +370,37 @@ def run_simulation():
 
     tic = time.time()
 
-    nest.Simulate(params['presimtime'])
+    nest.Prepare()
 
-    PreparationTime = time.time() - tic
+    InitTime = time.time() - tic
     init_memory = str(memory_thisjob())
 
     tic = time.time()
 
-    nest.Simulate(params['simtime'])
+    nest.Run(params['presimtime'])
+
+    PresimTime = time.time() - tic
+    presim_memory = str(memory_thisjob())
+
+    tic = time.time()
+
+    nest.Run(params['simtime'])
 
     SimCPUTime = time.time() - tic
     total_memory = str(memory_thisjob())
+
+    nest.Cleanup()
 
     average_rate = 0.0
     if params['record_spikes']:
         average_rate = compute_rate(sr)
 
-    d = {'py_time_presimulate': PreparationTime,
+    d = {'py_time_init': InitTime,
+         'py_time_presimulate': PresimTime,
          'py_time_simulate': SimCPUTime,
          'base_memory': base_memory,
          'init_memory': init_memory,
+         'presim_memory': presim_memory,
          'total_memory': total_memory,
          'average_rate': average_rate}
     d.update(build_dict)
