@@ -217,7 +217,9 @@ def build_network():
         'grng_seed': grng_seed,
         'rng_seeds': rng_seeds,
         'overwrite_files': True})
-    nest.SetKernelStatus({kwds})
+    extra_params = {kwds}
+    if extra_params:
+        nest.SetKernelStatus(extra_params)
 
     nest.message(M_INFO, 'build_network', 'Creating excitatory population.')
     E_neurons = nest.Create('iaf_psc_alpha', NE, params=model_params)
