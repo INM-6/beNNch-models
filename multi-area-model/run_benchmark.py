@@ -25,6 +25,9 @@ fn = os.path.join(data_path,
                   '_'.join(('custom_params', str(nest.Rank()))))
 with open(fn, 'r') as f:
     custom_params = json.load(f)
+    extra_params = {kwds}
+    if extra_params:
+        custom_params['sim_params'].update(extra_params)
 
 print("Create network and simulate\n")
 
