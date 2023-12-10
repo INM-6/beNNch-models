@@ -100,7 +100,9 @@ params = {
     'rng_seed': {rng_seed},            # random number generator seed
     'path_name': '.',                  # path where all files will have to be written
     'log_file': 'logfile',             # naming scheme for the log files
+    'step_data_keys': {step_data_keys} # metrics to be recorded at each time step
 }
+step_data_keys = params['step_data_keys'].split(',')
 
 
 def convert_synapse_weight(tau_m, tau_syn, C_m):
@@ -366,19 +368,50 @@ def run_simulation():
     InitTime = time.time() - tic
     init_memory = str(memory_thisjob())
 
+    presim_steps = int(params['presimtime'] // nest.min_delay)
+    presim_remaining_time = params['presimtime'] - (presim_steps * nest.min_delay)
+    sim_steps = int(params['simtime'] // nest.min_delay)
+    sim_remaining_time = params['simtime'] - (sim_steps * nest.min_delay)
+    
+    total_steps = presim_steps + sim_steps + (1 if presim_remaining_time > 0 else 0) + (1 if sim_remaining_time > 0 else 0)
+    times, vmsizes, vmpeaks, vmrsss = (np.empty(total_steps), np.empty(total_steps), np.empty(total_steps), np.empty(total_steps))
+    step_data = {key: np.empty(total_steps) for key in step_data_keys}
+
+    for d in range(presim_steps):
+        tic = time.time()
+        nest.Run(nest.min_delay)
+        times[d] = time.time() - tic
+        spike_counts[d] = nest.local_spike_counter
+        for key in step_data_keys:
+            step_data[key][d] = getattr(nest, key)
+
+    if presim_remaining_time > 0:
+        tic = time.time()
+        nest.Run(presim_remaining_time)
+        times[presim_steps] = time.time() - tic
+        for key in step_data_keys:
+            step_data[key][presim_steps] = getattr(nest, key)
+        presim_steps += 1
+
+    PreparationTime = time.time() - tic
     tic = time.time()
 
-    nest.Run(params['presimtime'])
+    for d in range(sim_steps):
+        tic = time.time()
+        nest.Run(nest.min_delay)
+        times[presim_steps + d] = time.time() - tic
+        for key in step_data_keys:
+            step_data[key][presim_steps + d] = getattr(nest, key)
 
-    PresimTime = time.time() - tic
-    presim_memory = str(memory_thisjob())
-
-    tic = time.time()
-
-    nest.Run(params['simtime'])
+    if sim_remaining_time > 0:
+        tic = time.time()
+        nest.Run(sim_remaining_time)
+        times[presim_steps + sim_steps] = time.time() - tic
+        for key in step_data_keys:
+            step_data[key][presim_steps + sim_steps] = getattr(nest, key)
+        sim_steps += 1
 
     SimCPUTime = time.time() - tic
-    total_memory = str(memory_thisjob())
 
     nest.Cleanup()
 
@@ -387,7 +420,7 @@ def run_simulation():
         average_rate = compute_rate(sr)
 
     d = {'py_time_network_prepare': InitTime,
-         'py_time_presimulate': PresimTime,
+         'py_time_presimulate': PreparationTime,
          'py_time_simulate': SimCPUTime,
          'base_memory': base_memory,
          'init_memory': init_memory,
