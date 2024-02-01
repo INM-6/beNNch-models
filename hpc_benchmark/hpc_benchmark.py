@@ -96,7 +96,6 @@ params = {
     'presimtime': {model_time_presim},         # simulation time until reaching equilibrium
     'dt': 0.1,                                 # simulation step
     'compressed_spikes': {compressed_spikes},  # whether to use spike compression
-    'sort_connections': {sort_connections},
     'record_spikes': {record_spikes},          # switch to record spikes of excitatory neurons to file
     'rng_seed': {rng_seed},                    # random number generator seed
     'path_name': '.',                          # path where all files will have to be written
