@@ -89,18 +89,19 @@ M_ERROR = 30
 # Define all relevant parameters: changes should be made here
 
 params = {
-    'num_threads': {threads_per_task},    # total number of threads per processes
-    'scale': {scale},                     # scaling factor of the network size
-                                          # total network size = scale*11250 neurons
-    'simtime': {model_time_sim},          # total simulation time in ms
-    'presimtime': {model_time_presim},    # simulation time until reaching equilibrium
-    'dt': 0.1,                            # simulation step
-    'record_spikes': {record_spikes},     # switch to record spikes of excitatory
-                                          # neurons to file
-    'rng_seed': {rng_seed},               # random number generator seed
-    'path_name': '.',                     # path where all files will have to be written
-    'log_file': 'logfile',                # naming scheme for the log files
-    'step_data_keys': '{step_data_keys}'  # metrics to be recorded at each time step
+    'num_threads': {threads_per_task},         # total number of threads per process
+    'scale': {scale},                          # scaling factor of the network size
+                                               # total network size = scale*11250 neurons
+    'simtime': {model_time_sim},               # total simulation time in ms
+    'presimtime': {model_time_presim},         # simulation time until reaching equilibrium
+    'dt': 0.1,                                 # simulation step
+    'compressed_spikes': {compressed_spikes},  # whether to use spike compression
+    'sort_connections': {sort_connections},
+    'record_spikes': {record_spikes},          # switch to record spikes of excitatory neurons to file
+    'rng_seed': {rng_seed},                    # random number generator seed
+    'path_name': '.',                          # path where all files will have to be written
+    'log_file': 'logfile',                     # naming scheme for the log files
+    'step_data_keys': '{step_data_keys}'       # metrics to be recorded at each time step
 }
 step_data_keys = params['step_data_keys'].split(',')
 
@@ -167,7 +168,7 @@ brunel_params = {
     'mean_potential': 5.7,
     'sigma_potential': 7.2,
 
-    'delay': 1.5,  # synaptic delay, all connections(ms)
+    'delay': {delay},  # synaptic delay, all connections(ms)
 
     # synaptic weight
     'JE': 0.14,  # peak of EPSP
@@ -176,7 +177,7 @@ brunel_params = {
     'g': -5.0,
 
     'stdp_params': {
-        'delay': 1.5,
+        'delay': {delay},
         'alpha': 0.0513,
         'lambda': 0.1,  # STDP step size
         'mu': 0.4,  # STDP weight dependence exponent(potentiation)
@@ -208,7 +209,10 @@ def build_network():
     nest.SetKernelStatus({'local_num_threads': params['num_threads'],
                           'resolution': params['dt'],
                           'rng_seed': params['rng_seed'],
-                          'overwrite_files': True})
+                          'overwrite_files': True,
+                          'use_compressed_spikes': params['compressed_spikes'],
+                          'sort_connections_by_source': params['sort_connections'],
+                          'keep_source_table': False})
     extra_params = {kwds}
     if extra_params:
         nest.SetKernelStatus(extra_params)
@@ -262,7 +266,9 @@ def build_network():
         })
 
     BuildNodeTime = time.time() - tic
-    node_memory = str(memory_thisjob())
+    node_memory = str(get_vmsize())
+    node_memory_rss = str(get_rss())
+    node_memory_peak = str(get_vmpeak())
 
     tic = time.time()
 
@@ -340,12 +346,18 @@ def build_network():
 
     # read out time used for building
     BuildEdgeTime = time.time() - tic
-    network_memory = str(memory_thisjob())
+    network_memory = str(get_vmsize())
+    network_memory_rss = str(get_rss())
+    network_memory_peak = str(get_vmpeak())
 
     d = {'py_time_create': BuildNodeTime,
          'py_time_connect': BuildEdgeTime,
          'node_memory': node_memory,
-         'network_memory': network_memory}
+         'node_memory_rss': node_memory_rss,
+         'node_memory_peak': node_memory_peak,
+         'network_memory': network_memory,
+         'network_memory_rss': network_memory_rss,
+         'network_memory_peak': network_memory_peak}
     recorders = E_recorder if params['record_spikes'] else None
 
     return d, recorders
@@ -357,7 +369,9 @@ def run_simulation():
     nest.ResetKernel()
     nest.set_verbosity(M_INFO)
 
-    base_memory = str(memory_thisjob())
+    base_memory = str(get_vmsize())
+    base_memory_rss = str(get_rss())
+    base_memory_peak = str(get_vmpeak())
 
     build_dict, sr = build_network()
 
@@ -366,7 +380,9 @@ def run_simulation():
     nest.Prepare()
 
     InitTime = time.time() - tic
-    init_memory = str(memory_thisjob())
+    init_memory = str(get_vmsize())
+    init_memory_rss = str(get_rss())
+    init_memory_peak = str(get_vmpeak())
 
     presim_steps = int(params['presimtime'] // nest.min_delay)
     presim_remaining_time = params['presimtime'] - (presim_steps * nest.min_delay)
@@ -381,7 +397,9 @@ def run_simulation():
         tic = time.time()
         nest.Run(nest.min_delay)
         times[d] = time.time() - tic
-        spike_counts[d] = nest.local_spike_counter
+        vmsizes[presim_steps] = get_vmsize()
+        vmpeaks[presim_steps] = get_vmpeak()
+        vmrsss[presim_steps] = get_rss()
         for key in step_data_keys:
             step_data[key][d] = getattr(nest, key)
 
@@ -389,6 +407,9 @@ def run_simulation():
         tic = time.time()
         nest.Run(presim_remaining_time)
         times[presim_steps] = time.time() - tic
+        vmsizes[presim_steps + sim_steps] = get_vmsize()
+        vmpeaks[presim_steps + sim_steps] = get_vmpeak()
+        vmrsss[presim_steps + sim_steps] = get_rss()
         for key in step_data_keys:
             step_data[key][presim_steps] = getattr(nest, key)
         presim_steps += 1
@@ -417,7 +438,7 @@ def run_simulation():
     if params['record_spikes']:
         average_rate = compute_rate(sr)
 
-    d = {'py_time_network_prepare': InitTime,
+    d = {'py_time_init': InitTime,
          'py_time_presimulate': PreparationTime,
          'py_time_simulate': SimCPUTime,
          'base_memory': base_memory,
@@ -458,10 +479,38 @@ def compute_rate(sr):
     return 1. * n_local_spikes / (n_local_neurons * simtime) * 1e3
 
 
-def memory_thisjob():
-    """Wrapper to obtain current memory usage"""
-    nest.ll_api.sr('memory_thisjob')
-    return nest.ll_api.spp()
+def _VmB(VmKey):
+    _proc_status = '/proc/%d/status' % os.getpid()
+    _scale = {'kB': 1024.0, 'mB': 1024.0*1024.0, 'KB': 1024.0, 'MB': 1024.0*1024.0}
+    # get pseudo file  /proc/<pid>/status
+    try:
+        t = open(_proc_status)
+        v = t.read()
+        t.close()
+    except:
+        return 0.0  # non-Linux?
+    # get VmKey line e.g. 'VmRSS:  9999  kB\n ...'
+    i = v.index(VmKey)
+    v = v[i:].split(None, 3)  # whitespace
+    if len(v) < 3:
+        return 0.0  # invalid format?
+    # convert Vm value to bytes
+    return float(v[1]) * _scale[v[2]]
+
+
+def get_vmsize(since=0.0):
+    """Return memory usage in bytes."""
+    return _VmB('VmSize:') - since
+
+
+def get_rss(since=0.0):
+    """Return resident memory usage in bytes."""
+    return _VmB('VmRSS:') - since
+
+
+def get_vmpeak(since=0.0):
+    """Return peak memory usage in bytes."""
+    return _VmB('VmPeak:') - since
 
 
 def lambertwm1(x):
