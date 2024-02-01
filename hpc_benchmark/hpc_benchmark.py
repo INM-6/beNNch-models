@@ -83,24 +83,23 @@ import nest.raster_plot
 M_INFO = 10
 M_ERROR = 30
 
-
 ###############################################################################
 # Parameter section
 # Define all relevant parameters: changes should be made here
 
 params = {
-    'num_threads': {threads_per_task},         # total number of threads per process
-    'scale': {scale},                          # scaling factor of the network size
-                                               # total network size = scale*11250 neurons
-    'simtime': {model_time_sim},               # total simulation time in ms
-    'presimtime': {model_time_presim},         # simulation time until reaching equilibrium
-    'dt': 0.1,                                 # simulation step
+    'num_threads': {threads_per_task},  # total number of threads per process
+    'scale': {scale},  # scaling factor of the network size
+    # total network size = scale*11250 neurons
+    'simtime': {model_time_sim},  # total simulation time in ms
+    'presimtime': {model_time_presim},  # simulation time until reaching equilibrium
+    'dt': 0.1,  # simulation step
     'compressed_spikes': {compressed_spikes},  # whether to use spike compression
-    'record_spikes': {record_spikes},          # switch to record spikes of excitatory neurons to file
-    'rng_seed': {rng_seed},                    # random number generator seed
-    'path_name': '.',                          # path where all files will have to be written
-    'log_file': 'logfile',                     # naming scheme for the log files
-    'step_data_keys': '{step_data_keys}'       # metrics to be recorded at each time step
+    'record_spikes': {record_spikes},  # switch to record spikes of excitatory neurons to file
+    'rng_seed': {rng_seed},  # random number generator seed
+    'path_name': '.',  # path where all files will have to be written
+    'log_file': 'logfile',  # naming scheme for the log files
+    'step_data_keys': '{step_data_keys}'  # metrics to be recorded at each time step
 }
 step_data_keys = params['step_data_keys'].split(',')
 
@@ -121,9 +120,10 @@ def convert_synapse_weight(tau_m, tau_syn, C_m):
     t_rise = 1.0 / b * (-lambertwm1(-np.exp(-1.0 / a) / a).real - 1.0 / a)
 
     v_max = np.exp(1.0) / (tau_syn * C_m * b) * (
-        (np.exp(-t_rise / tau_m) - np.exp(-t_rise / tau_syn)) /
-        b - t_rise * np.exp(-t_rise / tau_syn))
+            (np.exp(-t_rise / tau_m) - np.exp(-t_rise / tau_syn)) /
+            b - t_rise * np.exp(-t_rise / tau_syn))
     return 1. / v_max
+
 
 ###############################################################################
 # For compatibility with earlier benchmarks, we require a rise time of
@@ -134,7 +134,6 @@ def convert_synapse_weight(tau_m, tau_syn, C_m):
 
 
 tau_syn = 0.32582722403722841
-
 
 brunel_params = {
     'NE': int(9000 * params['scale']),  # number of excitatory neurons
@@ -186,6 +185,7 @@ brunel_params = {
     'eta': 1.685,  # scaling of external stimulus
     'filestem': params['path_name']
 }
+
 
 ###############################################################################
 # Function Section
@@ -244,12 +244,12 @@ def build_network():
     JE_pA = conversion_factor * brunel_params['JE']
 
     nu_thresh = model_params['V_th'] / (
-        CE * model_params['tau_m'] / model_params['C_m'] *
-        JE_pA * np.exp(1.) * tau_syn)
+            CE * model_params['tau_m'] / model_params['C_m'] *
+            JE_pA * np.exp(1.) * tau_syn)
     nu_ext = nu_thresh * brunel_params['eta']
 
     E_stimulus = nest.Create('poisson_generator', 1, {
-                             'rate': nu_ext * CE * 1000.})
+        'rate': nu_ext * CE * 1000.})
 
     nest.message(M_INFO, 'build_network',
                  'Creating excitatory spike recorder.')
@@ -386,9 +386,11 @@ def run_simulation():
     presim_remaining_time = params['presimtime'] - (presim_steps * nest.min_delay)
     sim_steps = int(params['simtime'] // nest.min_delay)
     sim_remaining_time = params['simtime'] - (sim_steps * nest.min_delay)
-    
-    total_steps = presim_steps + sim_steps + (1 if presim_remaining_time > 0 else 0) + (1 if sim_remaining_time > 0 else 0)
-    times, vmsizes, vmpeaks, vmrsss = (np.empty(total_steps), np.empty(total_steps), np.empty(total_steps), np.empty(total_steps))
+
+    total_steps = presim_steps + sim_steps + (1 if presim_remaining_time > 0 else 0) + (
+        1 if sim_remaining_time > 0 else 0)
+    times, vmsizes, vmpeaks, vmrsss = (
+    np.empty(total_steps), np.empty(total_steps), np.empty(total_steps), np.empty(total_steps))
     step_data = {key: np.empty(total_steps) for key in step_data_keys}
 
     for d in range(presim_steps):
@@ -431,6 +433,9 @@ def run_simulation():
         sim_steps += 1
 
     SimCPUTime = time.time() - tic
+    total_memory = str(get_vmsize())
+    total_memory_rss = str(get_rss())
+    total_memory_peak = str(get_vmpeak())
 
     average_rate = 0.0
     if params['record_spikes']:
@@ -441,8 +446,13 @@ def run_simulation():
          'py_time_simulate': SimCPUTime,
          'base_memory': base_memory,
          'init_memory': init_memory,
-         'presim_memory': presim_memory,
          'total_memory': total_memory,
+         'base_memory_rss': base_memory_rss,
+         'init_memory_rss': init_memory_rss,
+         'total_memory_rss': total_memory_rss,
+         'base_memory_peak': base_memory_peak,
+         'init_memory_peak': init_memory_peak,
+         'total_memory_peak': total_memory_peak,
          'average_rate': average_rate}
     d.update(build_dict)
     d.update(nest.kernel_status)
@@ -458,7 +468,7 @@ def run_simulation():
     fn = '{fn}_{rank}_steps.dat'.format(fn=params['log_file'], rank=nest.Rank())
     with open(fn, 'w') as f:
         f.write('time ' + ' '.join(step_data_keys) + ' \n')
-        for d in range(presim_steps+sim_steps):
+        for d in range(presim_steps + sim_steps):
             f.write(str(times[d]) + ' ' + ' '.join(str(step_data[key]) for key in step_data_keys) + ' \n')
 
 
@@ -479,7 +489,7 @@ def compute_rate(sr):
 
 def _VmB(VmKey):
     _proc_status = '/proc/%d/status' % os.getpid()
-    _scale = {'kB': 1024.0, 'mB': 1024.0*1024.0, 'KB': 1024.0, 'MB': 1024.0*1024.0}
+    _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0, 'KB': 1024.0, 'MB': 1024.0 * 1024.0}
     # get pseudo file  /proc/<pid>/status
     try:
         t = open(_proc_status)
