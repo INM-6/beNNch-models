@@ -89,18 +89,18 @@ M_ERROR = 30
 # Define all relevant parameters: changes should be made here
 
 params = {
-    'num_threads': {threads_per_task}, # total number of threads per processes
-    'scale': {scale},                  # scaling factor of the network size
-                                       # total network size = scale*11250 neurons
-    'simtime': {model_time_sim},       # total simulation time in ms
-    'presimtime': {model_time_presim}, # simulation time until reaching equilibrium
-    'dt': 0.1,                         # simulation step
-    'record_spikes': {record_spikes},  # switch to record spikes of excitatory
-                                       # neurons to file
-    'rng_seed': {rng_seed},            # random number generator seed
-    'path_name': '.',                  # path where all files will have to be written
-    'log_file': 'logfile',             # naming scheme for the log files
-    'step_data_keys': {step_data_keys} # metrics to be recorded at each time step
+    'num_threads': {threads_per_task},    # total number of threads per processes
+    'scale': {scale},                     # scaling factor of the network size
+                                          # total network size = scale*11250 neurons
+    'simtime': {model_time_sim},          # total simulation time in ms
+    'presimtime': {model_time_presim},    # simulation time until reaching equilibrium
+    'dt': 0.1,                            # simulation step
+    'record_spikes': {record_spikes},     # switch to record spikes of excitatory
+                                          # neurons to file
+    'rng_seed': {rng_seed},               # random number generator seed
+    'path_name': '.',                     # path where all files will have to be written
+    'log_file': 'logfile',                # naming scheme for the log files
+    'step_data_keys': '{step_data_keys}'  # metrics to be recorded at each time step
 }
 step_data_keys = params['step_data_keys'].split(',')
 
