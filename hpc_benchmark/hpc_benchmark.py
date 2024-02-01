@@ -168,7 +168,7 @@ brunel_params = {
     'mean_potential': 5.7,
     'sigma_potential': 7.2,
 
-    'delay': {delay},  # synaptic delay, all connections(ms)
+    'delay': 1.5,  # synaptic delay, all connections(ms)
 
     # synaptic weight
     'JE': 0.14,  # peak of EPSP
@@ -177,7 +177,7 @@ brunel_params = {
     'g': -5.0,
 
     'stdp_params': {
-        'delay': {delay},
+        'delay': 1.5,
         'alpha': 0.0513,
         'lambda': 0.1,  # STDP step size
         'mu': 0.4,  # STDP weight dependence exponent(potentiation)
