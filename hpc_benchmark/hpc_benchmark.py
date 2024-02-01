@@ -210,7 +210,6 @@ def build_network():
                           'rng_seed': params['rng_seed'],
                           'overwrite_files': True,
                           'use_compressed_spikes': params['compressed_spikes'],
-                          'sort_connections_by_source': params['sort_connections'],
                           'keep_source_table': False})
     extra_params = {kwds}
     if extra_params:
