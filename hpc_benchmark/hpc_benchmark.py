@@ -392,9 +392,9 @@ def run_simulation():
     times, vmsizes, vmpeaks, vmrsss = (
     np.empty(total_steps), np.empty(total_steps), np.empty(total_steps), np.empty(total_steps))
     step_data = {key: np.empty(total_steps) for key in step_data_keys}
+    tic = time.time()
 
     for d in range(presim_steps):
-        tic = time.time()
         nest.Run(nest.min_delay)
         times[d] = time.time() - tic
         vmsizes[presim_steps] = get_vmsize()
@@ -404,7 +404,6 @@ def run_simulation():
             step_data[key][d] = getattr(nest, key)
 
     if presim_remaining_time > 0:
-        tic = time.time()
         nest.Run(presim_remaining_time)
         times[presim_steps] = time.time() - tic
         vmsizes[presim_steps + sim_steps] = get_vmsize()
@@ -418,14 +417,12 @@ def run_simulation():
     tic = time.time()
 
     for d in range(sim_steps):
-        tic = time.time()
         nest.Run(nest.min_delay)
         times[presim_steps + d] = time.time() - tic
         for key in step_data_keys:
             step_data[key][presim_steps + d] = getattr(nest, key)
 
     if sim_remaining_time > 0:
-        tic = time.time()
         nest.Run(sim_remaining_time)
         times[presim_steps + sim_steps] = time.time() - tic
         for key in step_data_keys:
