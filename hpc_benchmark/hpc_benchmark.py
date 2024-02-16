@@ -464,9 +464,9 @@ def run_simulation():
 
     fn = '{fn}_{rank}_steps.dat'.format(fn=params['log_file'], rank=nest.Rank())
     with open(fn, 'w') as f:
-        f.write('time ' + ' '.join(step_data_keys) + ' \n')
+        f.write('time ' + ' '.join(step_data_keys) + '\n')
         for d in range(presim_steps + sim_steps):
-            f.write(str(times[d]) + ' ' + ' '.join(str(step_data[key][d]) for key in step_data_keys) + ' \n')
+            f.write(str(times[d]) + ' ' + ' '.join(str(step_data[key][d]) for key in step_data_keys) + '\n')
 
 
 def compute_rate(sr):
