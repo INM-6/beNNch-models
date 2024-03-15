@@ -45,9 +45,11 @@ sim_params = {
     # simulated time (in ms)
     't_sim': 10.0,
     # no. of MPI processes:
-    'num_processes': 1,
+    'num_processes': 32,
     # no. of threads per MPI process':
-    'local_num_threads': 1,
+    'local_num_threads': 64,
+    # structure aware neuron distribution:
+    'morph': False,
     # Areas represented in the network
     'areas_simulated': complete_area_list,
     # Spike buffer adaptation
