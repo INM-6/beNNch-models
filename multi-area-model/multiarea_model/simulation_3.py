@@ -172,7 +172,7 @@ class Simulation:
         - spike recorder
         - voltmeter
         """
-        if len(self.simulation.params['recording_dict']['areas_recorded']) != 0:
+        if len(self.areas_recorded) != 0:
             self.spike_recorder = nest.Create('spike_recorder')
             status_dict = deepcopy(self.params['recording_dict']['spike_dict'])
             label = '-'.join((self.label,
