@@ -415,7 +415,7 @@ def run_simulation():
 
     PreparationTime = time.time() - tic
 
-    timer_presim_data = {k: v for k, v in nest.kernel_status.items() if "time_" in k}
+    time_simulate_presim = nest.kernel_status["time_simulate"]
 
     tic = time.time()
 
@@ -456,9 +456,7 @@ def run_simulation():
          'average_rate': average_rate}
     d.update(build_dict)
     final_kernel_status = nest.kernel_status
-    for k, v in timer_presim_data.items():
-        print(k, final_kernel_status[k], v)
-        final_kernel_status[k] -= v
+    final_kernel_status["time_simulate"] -= time_simulate_presim
     d.update(final_kernel_status)
     print(d)
 
