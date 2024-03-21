@@ -20,7 +20,7 @@ mam_state = sys.argv[7]
 # Fig5: corresponds to figure 5 in schmidt et al. 2018: Metastable
 rng_seed = int(sys.argv[8])
 t_presim = float(sys.argv[9])
-record_spikes = bool(sys.argv[10])
+record_spikes = sys.argv[10] == 'True'
 
 if mam_state == 'ground':
     figure = 'Fig3'
