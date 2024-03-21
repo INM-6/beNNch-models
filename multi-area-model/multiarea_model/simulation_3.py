@@ -317,7 +317,7 @@ class Simulation:
         print("Network preparation time in {0:.2f} seconds.".format(self.time_network_prepare))
 
         t5 = time.time()
-        nest.Simulate(self.pre_T)
+        nest.Run(self.pre_T)
         self.time_presimulate = time.time() - t5
         self.init_memory = self.memory()
         self.logging_presim()
@@ -361,7 +361,7 @@ class Simulation:
         with open(fn, 'w') as f:
             for idx, value in enumerate(values):
                 f.write('presim_' + timer_keys[idx] + ' ' + str(value) + '\n')
-            f.write('local_spike_counter_presim' + ' ' + str(nest.GetKernelStatus('local_spike_counter')) + '\n')
+            f.write('presim_local_spike_counter' + ' ' + str(nest.GetKernelStatus('local_spike_counter')) + '\n')
 
     def logging(self):
         """
