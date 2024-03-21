@@ -321,6 +321,7 @@ class Simulation:
         self.time_presimulate = time.time() - t5
         self.init_memory = self.memory()
         self.logging_presim()
+        nest.Cleanup()
         print("Presimulation time in {0:.2f} seconds.".format(self.time_presimulate))
 
         t6 = time.time()
