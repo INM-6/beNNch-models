@@ -186,17 +186,6 @@ class Simulation:
                               status_dict['label']))
             status_dict.update({'label': label})
             self.voltmeter.set(status_dict)
-            
-    def create_neurons(self):
-        """
-        Create all neurons of MAM at once. (Create more neurons than necessary to enable splitting.)
-        """
-        total_num_neurons_per_area = [sub['total'] for sub in list(self.network.N.values())]
-        max_num_neurons_per_area = int(max(total_num_neurons_per_area))
-
-        total_num_neurons = max_num_neurons_per_area * len(self.areas_simulated)
-        self.all_neurons = nest.Create(self.network.params['neuron_params']['neuron_model'], total_num_neurons)
-        nest.SetStatus(self.all_neurons, 'frozen', True)
 
     def create_areas(self):
         """
@@ -303,8 +292,6 @@ class Simulation:
         print("Prepared simulation in {0:.2f} seconds.".format(self.time_kernel_prepare))
 
         self.create_recording_devices()
-        if self.custom_params['morph'] == True:
-            self.create_neurons()           
         self.create_areas()
         t2 = time.time()
         self.time_network_local = t2 - t1
@@ -477,17 +464,8 @@ class Area:
         """
         self.gids = {}
         self.num_local_nodes = 0
-        num_areas = len(self.simulation.areas_simulated)
-        area_idx = self.simulation.areas_simulated.index(self.name)    
-        start_idx_pop = 0            
         for pop in self.populations:
-            if self.simulation.custom_params['morph'] == True:
-                end_idx_pop = start_idx_pop + int(self.neuron_numbers[pop])
-                gid = self.simulation.all_neurons[area_idx+start_idx_pop*num_areas:area_idx+end_idx_pop*num_areas:num_areas]
-                nest.SetStatus(gid, 'frozen', False)
-                start_idx_pop = end_idx_pop
-            else:
-                gid = nest.Create(self.network.params['neuron_params']['neuron_model'],
+            gid = nest.Create(self.network.params['neuron_params']['neuron_model'],
                               int(self.neuron_numbers[pop]))
             mask = create_vector_mask(self.network.structure, areas=[self.name], pops=[pop])
             I_e = self.network.add_DC_drive[mask][0]

@@ -1,8 +1,8 @@
 import numpy as np
 import os
 
-from multiarea_model import MultiAreaModel_3
-from config import base_path, data_path
+from multiarea_model import MultiAreaModel
+from config import base_path
 
 """
 Down-scaled model.
@@ -31,18 +31,15 @@ network_params = {'N_scaling': 0.01,
                   'neuron_params': neuron_params}
 
 sim_params = {'t_sim': 2000.,
-              'num_processes': 2,
+              'num_processes': 1,
               'local_num_threads': 1,
-              'morph': False,
               'recording_dict': {'record_vm': False}}
 
 theory_params = {'dt': 0.1}
 
-M = MultiAreaModel_3(network_params, simulation=True,
+M = MultiAreaModel(network_params, simulation=True,
                    sim_spec=sim_params,
                    theory=True,
-                   data_path=data_path,
-                   data_folder_hash='123',
                    theory_spec=theory_params)
 p, r = M.theory.integrate_siegert()
 print("Mean-field theory predicts an average "
