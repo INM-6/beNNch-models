@@ -321,11 +321,10 @@ class Simulation:
         self.time_presimulate = time.time() - t5
         self.init_memory = self.memory()
         self.logging_presim()
-        nest.Cleanup()
         print("Presimulation time in {0:.2f} seconds.".format(self.time_presimulate))
 
         t6 = time.time()
-        nest.Simulate(self.T)
+        nest.Run(self.T)
         self.time_simulate = time.time() - t6
 
         self.total_memory = self.memory()
@@ -352,6 +351,8 @@ class Simulation:
                       'time_simulate'
                       ]
         values = nest.GetKernelStatus(timer_keys)
+
+        self.presim_timers = dict(zip(timer_keys, values))
 
         fn = os.path.join(self.data_dir,
                           'recordings',
@@ -383,6 +384,13 @@ class Simulation:
              'init_memory': self.init_memory,
              'total_memory': self.total_memory}
         d.update(nest.GetKernelStatus())
+
+        print('including presim time: ', d)
+        
+        # subtract presim timers from simtime timers
+        for key in self.presim_timers.keys():
+            d[key] -= self.presim_timers[key]
+            
         print(d)
 
         fn = os.path.join(self.data_dir,
