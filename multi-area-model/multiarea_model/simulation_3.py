@@ -384,8 +384,6 @@ class Simulation:
              'init_memory': self.init_memory,
              'total_memory': self.total_memory}
         d.update(nest.GetKernelStatus())
-
-        print('including presim time: ', d)
         
         # subtract presim timers from simtime timers
         for key in self.presim_timers.keys():
