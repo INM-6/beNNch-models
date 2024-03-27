@@ -172,12 +172,13 @@ class Simulation:
         - spike recorder
         - voltmeter
         """
-        self.spike_recorder = nest.Create('spike_recorder')
-        status_dict = deepcopy(self.params['recording_dict']['spike_dict'])
-        label = '-'.join((self.label,
-                          status_dict['label']))
-        status_dict.update({'label': label})
-        self.spike_recorder.set(status_dict)
+        if len(self.areas_recorded) != 0:
+            self.spike_recorder = nest.Create('spike_recorder')
+            status_dict = deepcopy(self.params['recording_dict']['spike_dict'])
+            label = '-'.join((self.label,
+                              status_dict['label']))
+            status_dict.update({'label': label})
+            self.spike_recorder.set(status_dict)
 
         if self.params['recording_dict']['record_vm']:
             self.voltmeter = nest.Create('voltmeter')
@@ -319,11 +320,11 @@ class Simulation:
         nest.Run(self.pre_T)
         self.time_presimulate = time.time() - t5
         self.init_memory = self.memory()
+        self.logging_presim()
         print("Presimulation time in {0:.2f} seconds.".format(self.time_presimulate))
 
         t6 = time.time()
         nest.Run(self.T)
-        nest.Cleanup()
         self.time_simulate = time.time() - t6
 
         self.total_memory = self.memory()
@@ -339,6 +340,30 @@ class Simulation:
             return mem['heap']
         else:
             return mem
+
+    def logging_presim(self):
+        timer_keys = ['time_communicate_target_data',
+                      'time_collocate_spike_data',
+                      'time_communicate_spike_data',
+                      'time_deliver_spike_data',
+                      'time_gather_spike_data',
+                      'time_update',
+                      'time_simulate'
+                      ]
+        values = nest.GetKernelStatus(timer_keys)
+
+        self.presim_timers = dict(zip(timer_keys, values))
+
+        fn = os.path.join(self.data_dir,
+                          'recordings',
+                          '_'.join((self.label,
+                                    'logfile',
+                                    str(nest.Rank()))))
+
+        with open(fn, 'w') as f:
+            for idx, value in enumerate(values):
+                f.write('presim_' + timer_keys[idx] + ' ' + str(value) + '\n')
+            f.write('presim_local_spike_counter' + ' ' + str(nest.GetKernelStatus('local_spike_counter')) + '\n')
 
     def logging(self):
         """
@@ -359,6 +384,11 @@ class Simulation:
              'init_memory': self.init_memory,
              'total_memory': self.total_memory}
         d.update(nest.GetKernelStatus())
+        
+        # subtract presim timers from simtime timers
+        for key in self.presim_timers.keys():
+            d[key] -= self.presim_timers[key]
+            
         print(d)
 
         fn = os.path.join(self.data_dir,
@@ -366,7 +396,7 @@ class Simulation:
                           '_'.join((self.label,
                                     'logfile',
                                     str(nest.Rank()))))
-        with open(fn, 'w') as f:
+        with open(fn, 'a') as f:
             for key, value in d.items():
                 f.write(key + ' ' + str(value) + '\n')
 
