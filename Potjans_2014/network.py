@@ -664,7 +664,10 @@ class Network:
                                     std=(
                                         self.net_dict['delay_matrix_mean'][i][j] *
                                         self.net_dict['delay_rel_std'])),
-                                min=self.sim_resolution,
+                                # resulting minimum delay is equal to resolution, see:
+                                # https://nest-simulator.readthedocs.io/en/latest/nest_behavior
+                                # /random_numbers.html#rounding-effects-when-randomizing-delays
+                                min=nest.resolution - 0.5 * nest.resolution,
                                 max=np.Inf)}
                     elif self.nest_version == '2':
                         syn_dict = {
@@ -774,7 +777,10 @@ class Network:
                             std=(
                                 self.stim_dict['delay_th_mean'] *
                                 self.stim_dict['delay_th_rel_std'])),
-                        min=self.sim_resolution,
+                        # resulting minimum delay is equal to resolution, see:
+                        # https://nest-simulator.readthedocs.io/en/latest/nest_behavior
+                        # /random_numbers.html#rounding-effects-when-randomizing-delays
+                        min=nest.resolution - 0.5 * nest.resolution,
                         max=np.Inf)}
 
             elif self.nest_version == '2':
