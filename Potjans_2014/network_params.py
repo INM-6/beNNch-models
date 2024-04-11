@@ -76,9 +76,7 @@ net_dict = {
     # 'local_num_threads' 4 and both 'N_scaling' and 'K_scaling' set to 1.
     # 
     # Since these rates were only taken from one simulation, they alone are not sufficient for verification.
-    # For that, rates should be compared to the firing rate plots produced by the network evaluation for individual runs
-    # or the averaged (10 runs) standard deviation per population:
-    # [1.2548324, 2.5248003, 3.43632659, 4.19884825, 5.27534955, 5.51494673, 1.63249623, 5.05082906]
+    # For that, rates should be compared to mean values over multiple runs with different RNG seeds.
     'full_mean_rates':
         np.array([0.903, 2.965, 4.414, 5.876, 7.569, 8.633, 1.105, 7.829]),
     # connection probabilities (the first index corresponds to the targets
