@@ -417,6 +417,8 @@ def run_simulation():
 
     time_simulate_presim = nest.kernel_status["time_simulate"]
 
+    intermediate_kernel_status = nest.kernel_status
+
     tic = time.time()
 
     for d in range(sim_steps):
@@ -458,6 +460,19 @@ def run_simulation():
     final_kernel_status = nest.kernel_status
     final_kernel_status["time_simulate"] -= time_simulate_presim
     d.update(final_kernel_status)
+
+    # Subtract timer information from presimulation period
+    timers = ['time_collocate_spike_data', 'time_communicate_prepare',
+              'time_communicate_spike_data', 'time_communicate_target_data',
+              'time_deliver_spike_data', 'time_gather_spike_data',
+              'time_gather_target_data', 'time_update']
+
+    for timer in timers:
+        try:
+            d[timer] -= intermediate_kernel_status[timer]
+        except KeyError:
+            # KeyError if compiled without detailed timers
+            continue
     print(d)
 
     nest.Cleanup()
