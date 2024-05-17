@@ -99,7 +99,8 @@ params = {
     'rng_seed': {rng_seed},  # random number generator seed
     'path_name': '.',  # path where all files will have to be written
     'log_file': 'logfile',  # naming scheme for the log files
-    'step_data_keys': '{step_data_keys}'  # metrics to be recorded at each time step
+    'step_data_keys': '{step_data_keys}',  # metrics to be recorded at each time step
+    'profile_memory': False, # record memory profile
 }
 step_data_keys = params['step_data_keys'].split(',')
 
@@ -367,75 +368,95 @@ def run_simulation():
     nest.ResetKernel()
     nest.set_verbosity(M_INFO)
 
-    base_memory = str(get_vmsize())
-    base_memory_rss = str(get_rss())
-    base_memory_peak = str(get_vmpeak())
+    if params['profile_memory']:
+        base_memory = str(get_vmsize())
+        base_memory_rss = str(get_rss())
+        base_memory_peak = str(get_vmpeak())
 
-    build_dict, sr = build_network()
+        build_dict, sr = build_network()
 
-    tic = time.time()
+        tic = time.time()
 
-    nest.Prepare()
+        nest.Prepare()
 
-    InitTime = time.time() - tic
-    init_memory = str(get_vmsize())
-    init_memory_rss = str(get_rss())
-    init_memory_peak = str(get_vmpeak())
+        InitTime = time.time() - tic
+        init_memory = str(get_vmsize())
+        init_memory_rss = str(get_rss())
+        init_memory_peak = str(get_vmpeak())
 
-    presim_steps = int(params['presimtime'] // nest.min_delay)
-    presim_remaining_time = params['presimtime'] - (presim_steps * nest.min_delay)
-    sim_steps = int(params['simtime'] // nest.min_delay)
-    sim_remaining_time = params['simtime'] - (sim_steps * nest.min_delay)
+        presim_steps = int(params['presimtime'] // nest.min_delay)
+        presim_remaining_time = params['presimtime'] - (presim_steps * nest.min_delay)
+        sim_steps = int(params['simtime'] // nest.min_delay)
+        sim_remaining_time = params['simtime'] - (sim_steps * nest.min_delay)
 
-    total_steps = presim_steps + sim_steps + (1 if presim_remaining_time > 0 else 0) + (
-        1 if sim_remaining_time > 0 else 0)
-    times, vmsizes, vmpeaks, vmrsss = (
-    np.empty(total_steps), np.empty(total_steps), np.empty(total_steps), np.empty(total_steps))
-    step_data = {key: np.empty(total_steps) for key in step_data_keys}
-    tic = time.time()
+        total_steps = presim_steps + sim_steps + (1 if presim_remaining_time > 0 else 0) + (
+            1 if sim_remaining_time > 0 else 0)
+        times, vmsizes, vmpeaks, vmrsss = (
+        np.empty(total_steps), np.empty(total_steps), np.empty(total_steps), np.empty(total_steps))
+        step_data = {key: np.empty(total_steps) for key in step_data_keys}
+        tic = time.time()
 
-    for d in range(presim_steps):
-        nest.Run(nest.min_delay)
-        times[d] = time.time() - tic
-        vmsizes[presim_steps] = get_vmsize()
-        vmpeaks[presim_steps] = get_vmpeak()
-        vmrsss[presim_steps] = get_rss()
-        for key in step_data_keys:
-            step_data[key][d] = getattr(nest, key)
+        for d in range(presim_steps):
+            nest.Run(nest.min_delay)
+            times[d] = time.time() - tic
+            vmsizes[presim_steps] = get_vmsize()
+            vmpeaks[presim_steps] = get_vmpeak()
+            vmrsss[presim_steps] = get_rss()
+            for key in step_data_keys:
+                step_data[key][d] = getattr(nest, key)
 
-    if presim_remaining_time > 0:
-        nest.Run(presim_remaining_time)
-        times[presim_steps] = time.time() - tic
-        vmsizes[presim_steps + sim_steps] = get_vmsize()
-        vmpeaks[presim_steps + sim_steps] = get_vmpeak()
-        vmrsss[presim_steps + sim_steps] = get_rss()
-        for key in step_data_keys:
-            step_data[key][presim_steps] = getattr(nest, key)
-        presim_steps += 1
+        if presim_remaining_time > 0:
+            nest.Run(presim_remaining_time)
+            times[presim_steps] = time.time() - tic
+            vmsizes[presim_steps + sim_steps] = get_vmsize()
+            vmpeaks[presim_steps + sim_steps] = get_vmpeak()
+            vmrsss[presim_steps + sim_steps] = get_rss()
+            for key in step_data_keys:
+                step_data[key][presim_steps] = getattr(nest, key)
+            presim_steps += 1
 
-    PreparationTime = time.time() - tic
+        PreparationTime = time.time() - tic
 
-    intermediate_kernel_status = nest.kernel_status
+        intermediate_kernel_status = nest.kernel_status
 
-    tic = time.time()
+        tic = time.time()
 
-    for d in range(sim_steps):
-        nest.Run(nest.min_delay)
-        times[presim_steps + d] = time.time() - tic
-        for key in step_data_keys:
-            step_data[key][presim_steps + d] = getattr(nest, key)
+        for d in range(sim_steps):
+            nest.Run(nest.min_delay)
+            times[presim_steps + d] = time.time() - tic
+            for key in step_data_keys:
+                step_data[key][presim_steps + d] = getattr(nest, key)
 
-    if sim_remaining_time > 0:
-        nest.Run(sim_remaining_time)
-        times[presim_steps + sim_steps] = time.time() - tic
-        for key in step_data_keys:
-            step_data[key][presim_steps + sim_steps] = getattr(nest, key)
-        sim_steps += 1
+        if sim_remaining_time > 0:
+            nest.Run(sim_remaining_time)
+            times[presim_steps + sim_steps] = time.time() - tic
+            for key in step_data_keys:
+                step_data[key][presim_steps + sim_steps] = getattr(nest, key)
+            sim_steps += 1
 
-    SimCPUTime = time.time() - tic
-    total_memory = str(get_vmsize())
-    total_memory_rss = str(get_rss())
-    total_memory_peak = str(get_vmpeak())
+        SimCPUTime = time.time() - tic
+        total_memory = str(get_vmsize())
+        total_memory_rss = str(get_rss())
+        total_memory_peak = str(get_vmpeak())
+
+    else:
+        build_dict, sr = build_network()
+
+        tic = time.time()
+
+        nest.Prepare()
+
+        InitTime = time.time() - tic
+
+        tic = time.time()
+        nest.Run(params['presimtime'])
+        PreparationTime = time.time() - tic
+
+        intermediate_kernel_status = nest.kernel_status
+
+        tic = time.time()
+        nest.Run(params['presimtime'])
+        SimCPUTime = time.time() - tic
 
     average_rate = 0.0
     if params['record_spikes']:
@@ -444,16 +465,21 @@ def run_simulation():
     d = {'py_time_init': InitTime,
          'py_time_presimulate': PreparationTime,
          'py_time_simulate': SimCPUTime,
-         'base_memory': base_memory,
-         'init_memory': init_memory,
-         'total_memory': total_memory,
-         'base_memory_rss': base_memory_rss,
-         'init_memory_rss': init_memory_rss,
-         'total_memory_rss': total_memory_rss,
-         'base_memory_peak': base_memory_peak,
-         'init_memory_peak': init_memory_peak,
-         'total_memory_peak': total_memory_peak,
          'average_rate': average_rate}
+
+    if params['profile_memory']:
+        memory_dict = {'base_memory': base_memory,
+                       'init_memory': init_memory,
+                       'total_memory': total_memory,
+                       'base_memory_rss': base_memory_rss,
+                       'init_memory_rss': init_memory_rss,
+                       'total_memory_rss': total_memory_rss,
+                       'base_memory_peak': base_memory_peak,
+                       'init_memory_peak': init_memory_peak,
+                       'total_memory_peak': total_memory_peak}
+
+        d.update(memory_dict)
+
     d.update(build_dict)
     final_kernel_status = nest.kernel_status
     d.update(final_kernel_status)
@@ -480,12 +506,13 @@ def run_simulation():
         for key, value in d.items():
             f.write(key + ' ' + str(value) + '\n')
 
-    fn = '{fn}_{rank}_steps.dat'.format(fn=params['log_file'], rank=nest.Rank())
-    with open(fn, 'w') as f:
-        f.write('time ' + ' '.join(step_data_keys) + '\n')
-        for d in range(presim_steps + sim_steps):
-            f.write(str(times[d]) + ' ' + ' '.join(str(step_data[key][d]) for key in step_data_keys) + '\n')
 
+    if params['profile_memory']:
+        fn = '{fn}_{rank}_steps.dat'.format(fn=params['log_file'], rank=nest.Rank())
+        with open(fn, 'w') as f:
+            f.write('time ' + ' '.join(step_data_keys) + '\n')
+            for d in range(presim_steps + sim_steps):
+                f.write(str(times[d]) + ' ' + ' '.join(str(step_data[key][d]) for key in step_data_keys) + '\n')
 
 def compute_rate(sr):
     """Compute local approximation of average firing rate
