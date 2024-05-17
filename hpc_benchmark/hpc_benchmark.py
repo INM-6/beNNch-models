@@ -443,10 +443,11 @@ def run_simulation():
         build_dict, sr = build_network()
 
         tic = time.time()
-
+        base_memory = str(get_vmsize())
         nest.Prepare()
 
         InitTime = time.time() - tic
+        init_memory = str(get_vmsize())
 
         tic = time.time()
         nest.Run(params['presimtime'])
@@ -457,6 +458,7 @@ def run_simulation():
         tic = time.time()
         nest.Run(params['presimtime'])
         SimCPUTime = time.time() - tic
+        total_memory = str(get_vmsize())
 
     average_rate = 0.0
     if params['record_spikes']:
@@ -465,13 +467,13 @@ def run_simulation():
     d = {'py_time_init': InitTime,
          'py_time_presimulate': PreparationTime,
          'py_time_simulate': SimCPUTime,
-         'average_rate': average_rate}
+         'average_rate': average_rate,
+         'base_memory': base_memory,
+         'init_memory': init_memory,
+         'total_memory': total_memory}
 
     if params['profile_memory']:
-        memory_dict = {'base_memory': base_memory,
-                       'init_memory': init_memory,
-                       'total_memory': total_memory,
-                       'base_memory_rss': base_memory_rss,
+        memory_dict = {'base_memory_rss': base_memory_rss,
                        'init_memory_rss': init_memory_rss,
                        'total_memory_rss': total_memory_rss,
                        'base_memory_peak': base_memory_peak,
