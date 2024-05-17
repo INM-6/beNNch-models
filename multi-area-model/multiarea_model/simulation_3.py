@@ -342,8 +342,7 @@ class Simulation:
             return mem
 
     def logging_presim(self):
-        timer_keys = ['time_communicate_target_data',
-                      'time_collocate_spike_data',
+        timer_keys = ['time_collocate_spike_data',
                       'time_communicate_spike_data',
                       'time_deliver_spike_data',
                       'time_gather_spike_data',
