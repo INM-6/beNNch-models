@@ -486,9 +486,8 @@ def run_simulation():
 
     # Subtract timer information from presimulation period
     timers = ['time_collocate_spike_data', 'time_communicate_prepare',
-              'time_communicate_spike_data', 'time_communicate_target_data',
-              'time_deliver_spike_data', 'time_gather_spike_data',
-              'time_gather_target_data', 'time_update', 'time_simulate']
+              'time_communicate_spike_data', 'time_deliver_spike_data',
+              'time_gather_spike_data', 'time_update', 'time_simulate']
 
     for timer in timers:
         try:
