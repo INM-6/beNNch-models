@@ -642,11 +642,11 @@ class Network:
 
                     if self.nest_version == '3':
                         if self.weight_matrix_mean[i][j] < 0:
-                            w_min = np.NINF
+                            w_min = -np.inf
                             w_max = 0.0
                         else:
                             w_min = 0.0
-                            w_max = np.Inf
+                            w_max = np.inf
 
                         syn_dict = {
                             'synapse_model': self.net_dict['synapse_type'],
@@ -665,7 +665,7 @@ class Network:
                                         self.net_dict['delay_matrix_mean'][i][j] *
                                         self.net_dict['delay_rel_std'])),
                                 min=self.sim_resolution,
-                                max=np.Inf)}
+                                max=np.inf)}
                     elif self.nest_version == '2':
                         syn_dict = {
                             'model': self.net_dict['synapse_type'],
@@ -767,7 +767,7 @@ class Network:
                             std=self.weight_th *
                             self.net_dict['weight_rel_std']),
                         min=0.0,
-                        max=np.Inf),
+                        max=np.inf),
                     'delay': nest.math.redraw(
                         nest.random.normal(
                             mean=self.stim_dict['delay_th_mean'],
@@ -775,7 +775,7 @@ class Network:
                                 self.stim_dict['delay_th_mean'] *
                                 self.stim_dict['delay_th_rel_std'])),
                         min=self.sim_resolution,
-                        max=np.Inf)}
+                        max=np.inf)}
 
             elif self.nest_version == '2':
                 syn_dict_th = {
