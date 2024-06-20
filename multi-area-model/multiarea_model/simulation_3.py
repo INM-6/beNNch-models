@@ -656,7 +656,6 @@ def connect(simulation,
                 s = network.distances[target_area.name][source_area.name]
                 mean_delay = s / v
 
-            dt = simulation.params['dt']
             syn_spec = {
                 'synapse_model': 'static_synapse',
                 'weight': nest.math.redraw(
@@ -672,7 +671,7 @@ def connect(simulation,
                         mean=mean_delay,
                         std=mean_delay * network.params['delay_params']['delay_rel']
                         ),
-                    min=dt - 0.5 * dt,
+                    min=simulation.params['dt'] - 0.5 * nest.resolution,
                     max=np.Inf)}
 
             nest.Connect(source_area.gids[source],
