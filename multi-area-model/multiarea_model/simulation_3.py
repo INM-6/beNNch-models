@@ -101,6 +101,8 @@ class Simulation:
         self.time_connect_area = 0
         self.time_connect_cc = 0
 
+        self.detailed_timers = 'time_communicate_spike_data' in nest.GetKernelStatus().keys()
+
     def __eq__(self, other):
         # Two simulations are equal if the simulation parameters and
         # the simulated networks are equal.
@@ -320,7 +322,8 @@ class Simulation:
         nest.Run(self.pre_T)
         self.time_presimulate = time.time() - t5
         self.init_memory = self.memory()
-        self.logging_presim()
+        if self.detailed_timers:
+            self.logging_presim()
         print("Presimulation time in {0:.2f} seconds.".format(self.time_presimulate))
 
         t6 = time.time()
@@ -383,10 +386,11 @@ class Simulation:
              'init_memory': self.init_memory,
              'total_memory': self.total_memory}
         d.update(nest.GetKernelStatus())
-        
-        # subtract presim timers from simtime timers
-        for key in self.presim_timers.keys():
-            d[key] -= self.presim_timers[key]
+
+        if self.detailed_timers:
+            # subtract presim timers from simtime timers
+            for key in self.presim_timers.keys():
+                d[key] -= self.presim_timers[key]
             
         print(d)
 
