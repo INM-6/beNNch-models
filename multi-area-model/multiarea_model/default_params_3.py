@@ -52,7 +52,7 @@ sim_params = {
     'areas_simulated': complete_area_list,
     # Spike buffer adaptation
     'spike_buffer_grow_extra' : 0.5,
-    'spike_buffer_shrink_limit': 0.,
+    'spike_buffer_shrink_limit': 0.2,
     'spike_buffer_shrink_spare': 0.1
 }
 
