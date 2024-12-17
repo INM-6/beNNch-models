@@ -487,14 +487,20 @@ def run_simulation():
     d.update(final_kernel_status)
 
     # Subtract timer information from presimulation period
-    timers = ['time_collocate_spike_data', 'time_communicate_prepare',
-              'time_communicate_spike_data', 'time_deliver_spike_data',
-              'time_gather_spike_data', 'time_update', 'time_simulate']
+    timers = ['time_collocate_spike_data', 'time_communicate_prepare', 'time_communicate_spike_data', 'time_communicate_target_data', 'time_construction_connect', 'time_construction_create', 'time_deliver_secondary_data', 'time_deliver_spike_data', 'time_gather_secondary_data', 'time_gather_spike_data', 'time_gather_target_data', 'time_omp_synchronization_construction', 'time_omp_synchronization_simulation', 'time_mpi_synchronization', 'time_simulate', 'time_update']
+    timers.append([timer + '_cpu' for timer in timers])
 
     for timer in timers:
         try:
             d[timer + '_presim'] = intermediate_kernel_status[timer]
-            d[timer] -= intermediate_kernel_status[timer]
+            if type(d[timer]) == tuple or type(d[timer]) == list:
+                timer_array = tuple(d[timer][tid] - intermediate_kernel_status[timer][tid] for tid in range(len(d[timer])))
+                d[timer] = timer_array[0]
+                d[timer + "_max"] = max(timer_array)
+                d[timer + "_max"] = min(timer_array)
+                d[timer + "_avg"] = np.mean(timer_array)
+            else:
+                d[timer] -= intermediate_kernel_status[timer]
         except KeyError:
             # KeyError if compiled without detailed timers, except time_simulate
             continue
