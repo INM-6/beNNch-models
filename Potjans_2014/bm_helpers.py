@@ -27,9 +27,9 @@ def memory():
     Use NEST's memory wrapper function to record used memory.
     """
     try:
-        mem = nest.ll_api.sli_func('memory_thisjob')
+        mem = 0 #nest.ll_api.sli_func('memory_thisjob')
     except AttributeError:
-        mem = nest.sli_func('memory_thisjob')
+        mem = 0 #nest.sli_func('memory_thisjob')
     if isinstance(mem, dict):
         return mem['heap']
     else:
