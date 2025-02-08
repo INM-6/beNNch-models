@@ -73,7 +73,7 @@ class Theory:
         tau = self.NP['tau_m'] * 1e-3
         dim = np.shape(K)[0]
         nest.ResetKernel()
-        nest.set_verbosity('M_FATAL')
+        nest.set_verbosity(nest.verbosity.M_FATAL)
         nest.SetKernelStatus({'resolution': dt,
                               'use_wfr': False,
                               'print_time': False,
