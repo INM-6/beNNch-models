@@ -396,55 +396,49 @@ def run_simulation():
         step_data = {key: np.empty(total_steps) for key in step_data_keys}
         tic = time.time()
 
-    for d in range(presim_steps):
-        nest.Run(nest.min_delay)
-        times[d] = time.time() - tic
-        vmsizes[d] = get_vmsize()
-        vmpeaks[d] = get_vmpeak()
-        vmrsss[d] = get_rss()
-        for key in step_data_keys:
-            step_data[key][d] = getattr(nest, key)
+        for d in range(presim_steps):
+            nest.Run(nest.min_delay)
+            times[d] = time.time() - tic
+            vmsizes[d] = get_vmsize()
+            vmpeaks[d] = get_vmpeak()
+            vmrsss[d] = get_rss()
+            for key in step_data_keys:
+                step_data[key][d] = getattr(nest, key)
 
-    if presim_remaining_time > 0:
-        nest.Run(presim_remaining_time)
-        times[presim_steps] = time.time() - tic
-        vmsizes[presim_steps] = get_vmsize()
-        vmpeaks[presim_steps] = get_vmpeak()
-        vmrsss[presim_steps] = get_rss()
-        for key in step_data_keys:
-            step_data[key][presim_steps] = getattr(nest, key)
-        presim_steps += 1
+        if presim_remaining_time > 0:
+            nest.Run(presim_remaining_time)
+            times[presim_steps] = time.time() - tic
+            vmsizes[presim_steps] = get_vmsize()
+            vmpeaks[presim_steps] = get_vmpeak()
+            vmrsss[presim_steps] = get_rss()
+            for key in step_data_keys:
+                step_data[key][presim_steps] = getattr(nest, key)
+            presim_steps += 1
 
-    PreparationTime = time.time() - tic
+        PreparationTime = time.time() - tic
 
-    intermediate_kernel_status = nest.kernel_status
+        intermediate_kernel_status = nest.kernel_status
 
-    tic = time.time()
+        tic = time.time()
 
-    for d in range(sim_steps):
-        nest.Run(nest.min_delay)
-        times[presim_steps + d] = time.time() - tic
-        vmsizes[presim_steps + d] = get_vmsize()
-        vmpeaks[presim_steps + d] = get_vmpeak()
-        vmrsss[presim_steps + d] = get_rss()
-        for key in step_data_keys:
-            step_data[key][presim_steps + d] = getattr(nest, key)
+        for d in range(sim_steps):
+            nest.Run(nest.min_delay)
+            times[presim_steps + d] = time.time() - tic
+            vmsizes[presim_steps + d] = get_vmsize()
+            vmpeaks[presim_steps + d] = get_vmpeak()
+            vmrsss[presim_steps + d] = get_rss()
+            for key in step_data_keys:
+                step_data[key][presim_steps + d] = getattr(nest, key)
 
-    if sim_remaining_time > 0:
-        nest.Run(sim_remaining_time)
-        times[presim_steps + sim_steps] = time.time() - tic
-        vmsizes[presim_steps + sim_steps] = get_vmsize()
-        vmpeaks[presim_steps + sim_steps] = get_vmpeak()
-        vmrsss[presim_steps + sim_steps] = get_rss()
-        for key in step_data_keys:
-            step_data[key][presim_steps + sim_steps] = getattr(nest, key)
-        sim_steps += 1
-
-        SimCPUTime = time.time() - tic
-        total_memory = str(get_vmsize())
-        total_memory_rss = str(get_rss())
-        total_memory_peak = str(get_vmpeak())
-
+        if sim_remaining_time > 0:
+            nest.Run(sim_remaining_time)
+            times[presim_steps + sim_steps] = time.time() - tic
+            vmsizes[presim_steps + sim_steps] = get_vmsize()
+            vmpeaks[presim_steps + sim_steps] = get_vmpeak()
+            vmrsss[presim_steps + sim_steps] = get_rss()
+            for key in step_data_keys:
+                step_data[key][presim_steps + sim_steps] = getattr(nest, key)
+            sim_steps += 1
     else:
         build_dict, sr = build_network()
 
@@ -462,10 +456,13 @@ def run_simulation():
         intermediate_kernel_status = nest.kernel_status
 
         tic = time.time()
-        nest.Run(params['presimtime'])
-        SimCPUTime = time.time() - tic
-        total_memory = str(get_vmsize())
+        nest.Run(params['simtime'])
 
+    SimCPUTime = time.time() - tic
+    total_memory = str(get_vmsize())
+    total_memory_rss = str(get_rss())
+    total_memory_peak = str(get_vmpeak())
+       
     average_rate = 0.0
     if params['record_spikes']:
         average_rate = compute_rate(sr)
