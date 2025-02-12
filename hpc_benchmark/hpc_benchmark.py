@@ -399,18 +399,18 @@ def run_simulation():
         for d in range(presim_steps):
             nest.Run(nest.min_delay)
             times[d] = time.time() - tic
-            vmsizes[presim_steps] = get_vmsize()
-            vmpeaks[presim_steps] = get_vmpeak()
-            vmrsss[presim_steps] = get_rss()
+            vmsizes[d] = get_vmsize()
+            vmpeaks[d] = get_vmpeak()
+            vmrsss[d] = get_rss()
             for key in step_data_keys:
                 step_data[key][d] = getattr(nest, key)
 
         if presim_remaining_time > 0:
             nest.Run(presim_remaining_time)
             times[presim_steps] = time.time() - tic
-            vmsizes[presim_steps + sim_steps] = get_vmsize()
-            vmpeaks[presim_steps + sim_steps] = get_vmpeak()
-            vmrsss[presim_steps + sim_steps] = get_rss()
+            vmsizes[presim_steps] = get_vmsize()
+            vmpeaks[presim_steps] = get_vmpeak()
+            vmrsss[presim_steps] = get_rss()
             for key in step_data_keys:
                 step_data[key][presim_steps] = getattr(nest, key)
             presim_steps += 1
@@ -424,21 +424,21 @@ def run_simulation():
         for d in range(sim_steps):
             nest.Run(nest.min_delay)
             times[presim_steps + d] = time.time() - tic
+            vmsizes[presim_steps + d] = get_vmsize()
+            vmpeaks[presim_steps + d] = get_vmpeak()
+            vmrsss[presim_steps + d] = get_rss()
             for key in step_data_keys:
                 step_data[key][presim_steps + d] = getattr(nest, key)
 
         if sim_remaining_time > 0:
             nest.Run(sim_remaining_time)
             times[presim_steps + sim_steps] = time.time() - tic
+            vmsizes[presim_steps + sim_steps] = get_vmsize()
+            vmpeaks[presim_steps + sim_steps] = get_vmpeak()
+            vmrsss[presim_steps + sim_steps] = get_rss()
             for key in step_data_keys:
                 step_data[key][presim_steps + sim_steps] = getattr(nest, key)
             sim_steps += 1
-
-        SimCPUTime = time.time() - tic
-        total_memory = str(get_vmsize())
-        total_memory_rss = str(get_rss())
-        total_memory_peak = str(get_vmpeak())
-
     else:
         build_dict, sr = build_network()
 
@@ -456,10 +456,13 @@ def run_simulation():
         intermediate_kernel_status = nest.kernel_status
 
         tic = time.time()
-        nest.Run(params['presimtime'])
-        SimCPUTime = time.time() - tic
-        total_memory = str(get_vmsize())
+        nest.Run(params['simtime'])
 
+    SimCPUTime = time.time() - tic
+    total_memory = str(get_vmsize())
+    total_memory_rss = str(get_rss())
+    total_memory_peak = str(get_vmpeak())
+       
     average_rate = 0.0
     if params['record_spikes']:
         average_rate = compute_rate(sr)
@@ -487,14 +490,26 @@ def run_simulation():
     d.update(final_kernel_status)
 
     # Subtract timer information from presimulation period
-    timers = ['time_collocate_spike_data', 'time_communicate_prepare',
-              'time_communicate_spike_data', 'time_deliver_spike_data',
-              'time_gather_spike_data', 'time_update', 'time_simulate']
+    timers = ['time_collocate_spike_data', 'time_communicate_spike_data', 'time_communicate_target_data', 'time_deliver_secondary_data', 'time_deliver_spike_data', 'time_gather_secondary_data', 'time_gather_spike_data', 'time_omp_synchronization_simulation', 'time_mpi_synchronization', 'time_simulate', 'time_update']
+    timers.extend([timer + '_cpu' for timer in timers])
 
     for timer in timers:
         try:
-            d[timer + '_presim'] = intermediate_kernel_status[timer]
-            d[timer] -= intermediate_kernel_status[timer]
+            if type(d[timer]) == tuple or type(d[timer]) == list:
+                timer_array = tuple(d[timer][tid] - intermediate_kernel_status[timer][tid] for tid in range(len(d[timer])))
+                d[timer] = timer_array[0]
+                d[timer + "_max"] = max(timer_array)
+                d[timer + "_min"] = min(timer_array)
+                d[timer + "_avg"] = np.mean(timer_array)
+                d[timer + "_all"] = timer_array
+                d[timer + '_presim'] = intermediate_kernel_status[timer][0]
+                d[timer + "_presim_max"] = max(intermediate_kernel_status[timer])
+                d[timer + "_presim_min"] = min(intermediate_kernel_status[timer])
+                d[timer + "_presim_avg"] = np.mean(intermediate_kernel_status[timer])
+                d[timer + "_presim_all"] = intermediate_kernel_status[timer]
+            else:
+                d[timer] -= intermediate_kernel_status[timer]
+                d[timer + '_presim'] = intermediate_kernel_status[timer]
         except KeyError:
             # KeyError if compiled without detailed timers, except time_simulate
             continue
