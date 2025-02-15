@@ -341,7 +341,7 @@ class Simulation:
         """
         Use NEST's memory wrapper function to record used memory.
         """
-        mem = 0 # TODO PYNEST-NG nest.ll_api.sli_func('memory_thisjob')
+        mem = nest.memory_size
         if isinstance(mem, dict):
             return mem['heap']
         else:
