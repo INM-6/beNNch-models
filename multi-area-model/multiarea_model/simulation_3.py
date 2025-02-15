@@ -348,16 +348,18 @@ class Simulation:
             return mem
 
     def logging_presim(self):
-        timer_keys = ['time_collocate_spike_data',
-                      'time_communicate_spike_data',
-                      'time_deliver_spike_data',
-                      'time_gather_spike_data',
+        self.presim_timers = {}
+        return
+        timer_keys = [#'time_collocate_spike_data',
+                      #'time_communicate_spike_data',
+                      #'time_deliver_spike_data',
+                      #'time_gather_spike_data',
                       'time_update',
                       'time_simulate'
                       ]
-        values = nest.GetKernelStatus(timer_keys)
+        values = {} #nest.GetKernelStatus(timer_keys)
 
-        self.presim_timers = dict(zip(timer_keys, values))
+        self.presim_timers = {} #dict(zip(timer_keys, values))
 
         fn = os.path.join(self.data_dir,
                           'recordings',
@@ -677,7 +679,7 @@ def connect(simulation,
                         mean=mean_delay,
                         std=mean_delay * network.params['delay_params']['delay_rel']
                         ),
-                    min=simulation.params['dt'],
+                    min=simulation.params['dt'] - 0.5 * nest.resolution,
                     max=np.inf)}
 
             nest.Connect(source_area.gids[source],
