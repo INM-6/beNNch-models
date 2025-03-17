@@ -18,11 +18,11 @@ usually not recorded in this scenario, the evaluation part with plotting of
 from stimulus_params import stim_dict
 from network_params import net_dict
 from sim_params import sim_dict
-from bm_helpers import logging, memory
 import network
 import nest
 import time
-time_start = time.time()
+from pathlib import Path
+from bennchutils.recorder import Recorder, yaml
 
 ###############################################################################
 # Initialize the network with simulation, network and stimulation parameters,
@@ -36,6 +36,19 @@ time_start = time.time()
 #
 # Benchmark: In contrast to run_microcircuit.py, some default simulation and
 # network parameters are here overwritten.
+
+def memory():
+    """
+    Use NEST's memory wrapper function to record used memory.
+    """
+    try:
+        mem = nest.ll_api.sli_func("memory_thisjob")
+    except AttributeError:
+        mem = nest.sli_func("memory_thisjob")
+    if isinstance(mem, dict):
+        return mem["heap"]
+    else:
+        return mem
 
 
 sim_dict.update({
@@ -54,78 +67,36 @@ net_dict.update({
     'V0_type': {V0_type},
     'synapse_type': {synapse_type}})
 
-py_timers = {}
-memory_used = {}
+record = Recorder(
+    fields_={
+        "kernel_status": nest.GetKernelStatus,
+        "memory": memory,
+        "timestamp": time.time,
+    }
+)
 
-memory_used['base_memory'] = memory()
+def main():
 
-t0 = time.time()
-net = network.Network(sim_dict, net_dict, stim_dict)
-t1 = time.time()
-py_timers['py_time_network'] = t1 - t0
+    net = network.Network(sim_dict, net_dict, stim_dict)
 
-net.create()
-t2 = time.time()
-py_timers['py_time_create'] = t2 - t1
-memory_used['node_memory'] = memory()
+    with record('create'):
+        net.create()
 
-net.connect()
-t3 = time.time()
-py_timers['py_time_connect'] = t3 - t2
-memory_used['network_memory'] = memory()
+    with record('connect'):
+        net.connect()
 
-net.simulate(sim_dict['t_presim'])
-t4 = time.time()
-py_timers['py_time_presimulate'] = t4 - t3
-memory_used['init_memory'] = memory()
+    with record('warmup'):
+        net.simulate(sim_dict['t_presim'])
 
-net.simulate(sim_dict['t_sim'])
-t5 = time.time()
-py_timers['py_time_simulate'] = t5 - t4
-memory_used['total_memory'] = memory()
+    with record('simulate')
+        net.simulate(sim_dict['t_sim'])
 
-###############################################################################
-# Summarize time measurements. Rank 0 usually takes longest because of print
-# calls.
 
-print(
-    '\nTimes of Rank {}:\n'.format(
-        nest.Rank()) +
-    '  Total time:          {:.3f} s\n'.format(
-        py_timers['py_time_simulate']) +
-    '  Time to initialize:  {:.3f} s\n'.format(
-        py_timers['py_time_network']) +
-    '  Time to create:      {:.3f} s\n'.format(
-        py_timers['py_time_create']) +
-    '  Time to connect:     {:.3f} s\n'.format(
-        py_timers['py_time_connect']) +
-    '  Time to presimulate: {:.3f} s\n'.format(
-        py_timers['py_time_presimulate']) +
-    '  Time to simulate:    {:.3f} s\n'.format(
-        py_timers['py_time_simulate']))
+    ###############################################################################
+    # Write out recorded data 
+    data_path = Path('data') / f'data_{nest.Rank():03}.yaml'
+    with data_path.open('w') as outfile:
+        yaml.dump(record.model_dump(), outfile)
 
-###############################################################################
-# Query the accumulated number of spikes on each rank.
-
-local_spike_counter = net.get_local_spike_counter()
-num_neurons = net.get_network_size()
-rate = 1. * local_spike_counter / num_neurons / net.get_total_sim_time() * 1000
-mem = memory()
-
-print(
-    'local_spike_counter: {}'.format(
-        local_spike_counter))
-
-print(
-    'Number of neurons: {}'.format(
-        num_neurons))
-
-print(
-    'Rate per rank: {}'.format(
-        rate))
-
-print(
-    'memory: {}'.format(
-        mem))
-
-logging(py_timers=py_timers, memory_used=memory_used)
+if __name__ == '__main__':
+    main()
