@@ -22,6 +22,7 @@ import os
 import pprint
 import shutil
 import time
+import math
 
 from .analysis_helpers import _load_npy_to_dict, model_iter
 from config import base_path
